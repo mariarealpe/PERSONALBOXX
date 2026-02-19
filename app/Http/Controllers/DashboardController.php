@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Models\User;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user = $request->user()->load('roles');
 
         // Determinar qué dashboard mostrar según el rol
         if ($user->hasRole('administrador')) {
@@ -26,12 +27,12 @@ class DashboardController extends Controller
     private function adminDashboard($user)
     {
         return Inertia::render('Admin/Dashboard', [
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
-                'total_clientes' => \App\Models\User::role('cliente')->count(),
-                'total_instructores' => \App\Models\User::role('instructor')->count(),
-                'clases_hoy' => 0, // TODO: implementar
-                'clases_semana' => 0, // TODO: implementar
+                'total_clientes' => User::role('cliente')->count(),
+                'total_instructores' => User::role('instructor')->count(),
+                'clases_hoy' => 0,
+                'clases_semana' => 0,
             ]
         ]);
     }
@@ -39,11 +40,11 @@ class DashboardController extends Controller
     private function instructorDashboard($user)
     {
         return Inertia::render('Instructor/Dashboard', [
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
-                'clases_hoy' => 0, // TODO: implementar
-                'clases_semana' => 0, // TODO: implementar
-                'total_alumnos' => 0, // TODO: implementar
+                'clases_hoy' => 0,
+                'clases_semana' => 0,
+                'total_alumnos' => 0,
             ]
         ]);
     }
@@ -51,11 +52,11 @@ class DashboardController extends Controller
     private function clienteDashboard($user)
     {
         return Inertia::render('Cliente/Dashboard', [
-            'user' => $user,
+            'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
-                'reservas_activas' => 0, // TODO: implementar
-                'clases_tomadas' => 0, // TODO: implementar
-                'plan_actual' => null, // TODO: implementar
+                'reservas_activas' => 0,
+                'clases_tomadas' => 0,
+                'plan_actual' => null,
             ]
         ]);
     }
