@@ -23,4 +23,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+use App\Http\Controllers\Auth\TwoFactorController;
+
+Route::get('/2fa', function () {
+    return Inertia::render('Auth/TwoFactor');
+})->name('2fa.form');
+
+Route::post('/2fa', [TwoFactorController::class, 'verify'])
+    ->name('2fa.verify');
+
+
 require __DIR__.'/auth.php';
