@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\TipoClaseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,6 +24,28 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+// ⬇️⬇️⬇️ PEGA AQUÍ LAS RUTAS DE ADMIN ⬇️⬇️⬇️
+// Rutas de Administrador
+Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.')->group(function () {
+
+    // Tipos de Clase
+    Route::get('/tipos-clase', [TipoClaseController::class, 'index'])
+        ->name('tipos-clase.index');
+
+    Route::post('/tipos-clase', [TipoClaseController::class, 'store'])
+        ->name('tipos-clase.store');
+
+    Route::put('/tipos-clase/{tipoClase}', [TipoClaseController::class, 'update'])
+        ->name('tipos-clase.update');
+
+    Route::delete('/tipos-clase/{tipoClase}', [TipoClaseController::class, 'destroy'])
+        ->name('tipos-clase.destroy');
+
+    Route::patch('/tipos-clase/{tipoClase}/toggle', [TipoClaseController::class, 'toggleActivo'])
+        ->name('tipos-clase.toggle');
+});
+// ⬆️⬆️⬆️ FIN RUTAS DE ADMIN ⬆️⬆️⬆️
+
 use App\Http\Controllers\Auth\TwoFactorController;
 
 Route::get('/2fa', function () {
@@ -31,6 +54,5 @@ Route::get('/2fa', function () {
 
 Route::post('/2fa', [TwoFactorController::class, 'verify'])
     ->name('2fa.verify');
-
 
 require __DIR__.'/auth.php';
