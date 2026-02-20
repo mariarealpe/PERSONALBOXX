@@ -11,22 +11,44 @@ class TwoFactorController extends Controller
 {
     public function verify(Request $request)
     {
+        // Validar que el código sea de 6 dígitos numéricos
         $request->validate([
-            'otp' => 'required'
+            'otp' => 'required|numeric|digits:6'
+        ], [
+            'otp.required' => 'Por favor ingresa el código.',
+            'otp.numeric' => 'El código debe contener solo números.',
+            'otp.digits' => 'El código debe tener exactamente 6 dígitos.'
         ]);
 
-        $user = User::find(session('2fa_user_id'));
+        // Obtener el ID del usuario de la sesión
+        $userId = session('2fa_user_id');
 
-        if (!$user) {
-            return redirect()->route('login');
+        // Verificar que existe la sesión 2FA
+        if (!$userId) {
+            return redirect()->route('login')->withErrors([
+                'otp' => 'Sesión expirada. Por favor inicia sesión nuevamente.'
+            ]);
         }
 
-        if (
-            $request->otp == $user->otp_code &&
-            now()->lt($user->otp_expires_at)
-        ) {
-            Auth::login($user);
+        // Buscar el usuario
+        $user = User::find($userId);
 
+        if (!$user) {
+            return redirect()->route('login')->withErrors([
+                'otp' => 'Usuario no encontrado. Inicia sesión nuevamente.'
+            ]);
+        }
+
+        // Verificar que el usuario tiene un código OTP
+        if (!$user->otp_code) {
+            return redirect()->route('login')->withErrors([
+                'otp' => 'No se encontró un código de verificación. Inicia sesión nuevamente.'
+            ]);
+        }
+
+        // Verificar que el código no ha expirado
+        if (!$user->otp_expires_at || now()->gte($user->otp_expires_at)) {
+            // Limpiar código expirado
             $user->update([
                 'otp_code' => null,
                 'otp_expires_at' => null
@@ -34,11 +56,37 @@ class TwoFactorController extends Controller
 
             session()->forget('2fa_user_id');
 
-            return redirect()->route('dashboard');
+            return back()->withErrors([
+                'otp' => 'El código ha expirado. Por favor inicia sesión nuevamente.'
+            ]);
         }
 
+        // Validar el código (comparación estricta)
+        if ($user->otp_code === $request->otp) {
+            // ✅ CÓDIGO CORRECTO
+
+            // Autenticar al usuario
+            Auth::login($user);
+
+            // Limpiar campos OTP de la base de datos
+            $user->update([
+                'otp_code' => null,
+                'otp_expires_at' => null
+            ]);
+
+            // Eliminar sesión temporal 2FA
+            session()->forget('2fa_user_id');
+
+            // Regenerar sesión por seguridad
+            $request->session()->regenerate();
+
+            // Redirigir al dashboard
+            return redirect()->intended('dashboard');
+        }
+
+        // ❌ CÓDIGO INCORRECTO
         return back()->withErrors([
-            'otp' => 'Código inválido o expirado'
-        ]);
+            'otp' => 'Código inválido. Verifica e intenta nuevamente.'
+        ])->withInput();
     }
 }
