@@ -33,4 +33,14 @@ class User extends Authenticatable
             'otp_expires_at' => 'datetime',  // ← AGREGAR
         ];
     }
+    // Agregar en app/Models/User.php
+    public function reservas()
+    {
+        return $this->hasMany(\App\Models\Reserva::class, 'cliente_id');
+    }
+
+    public function clientePlanes()
+    {
+        return $this->hasMany(\App\Models\ClientePlan::class, 'cliente_id');
+    }
 }

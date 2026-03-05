@@ -26,13 +26,17 @@ class DashboardController extends Controller
 
     private function adminDashboard($user)
     {
+        $inicioSemana = \Carbon\Carbon::now()->startOfWeek(\Carbon\Carbon::MONDAY);
+        $finSemana    = \Carbon\Carbon::now()->endOfWeek(\Carbon\Carbon::SUNDAY);
+
         return Inertia::render('Admin/Dashboard', [
             'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
-                'total_clientes' => User::role('cliente')->count(),
-                'total_instructores' => User::role('instructor')->count(),
-                'clases_hoy' => 0,
-                'clases_semana' => 0,
+                'total_clientes'    => \App\Models\User::role('cliente')->count(),
+                'total_instructores' => \App\Models\User::role('instructor')->count(),
+                'clases_hoy'        => \App\Models\Clase::whereDate('fecha_hora_inicio', today())->where('estado', '!=', 'cancelada')->count(),
+                'clases_semana'     => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioSemana, $finSemana])->where('estado', '!=', 'cancelada')->count(),
+                'asistencias_hoy'   => \App\Models\Asistencia::whereDate('hora_registro', today())->count(),
             ]
         ]);
     }

@@ -29,26 +29,33 @@ export default function DashboardLayout({ children, user }) {
                 </div>
 
                 <nav className="sidebar-nav">
-                    <Link
-                        href="/dashboard"
-                        className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
-                    >
+                    <Link href="/dashboard" className={`nav-item ${isActive('/dashboard') && !isActive('/admin') ? 'active' : ''}`}>
                         <span className="nav-icon">📊</span>
                         <span>Dashboard</span>
                     </Link>
-                    <Link
-                        href="/admin/tipos-clase"
-                        className={`nav-item ${isActive('/admin/tipos-clase') ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">🏋️</span>
+                    <Link href="/admin/tipos-clase" className={`nav-item ${isActive('/admin/tipos-clase') ? 'active' : ''}`}>
+                        <span className="nav-icon">🏷️</span>
                         <span>Tipos de Clase</span>
                     </Link>
-                    <Link
-                        href="/admin/instructores"
-                        className={`nav-item ${isActive('/admin/instructores') ? 'active' : ''}`}
-                    >
+                    <Link href="/admin/instructores" className={`nav-item ${isActive('/admin/instructores') ? 'active' : ''}`}>
                         <span className="nav-icon">👨‍🏫</span>
                         <span>Instructores</span>
+                    </Link>
+                    <Link href="/admin/clientes" className={`nav-item ${isActive('/admin/clientes') ? 'active' : ''}`}>
+                        <span className="nav-icon">👥</span>
+                        <span>Clientes</span>
+                    </Link>
+                    <Link href="/admin/clases" className={`nav-item ${isActive('/admin/clases') ? 'active' : ''}`}>
+                        <span className="nav-icon">📅</span>
+                        <span>Clases</span>
+                    </Link>
+                    <Link href="/admin/asistencias" className={`nav-item ${isActive('/admin/asistencias') ? 'active' : ''}`}>
+                        <span className="nav-icon">✅</span>
+                        <span>Asistencias</span>
+                    </Link>
+                    <Link href="/admin/reportes" className={`nav-item ${isActive('/admin/reportes') ? 'active' : ''}`}>
+                        <span className="nav-icon">📈</span>
+                        <span>Reportes</span>
                     </Link>
                 </nav>
 
