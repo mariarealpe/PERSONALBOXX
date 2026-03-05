@@ -43,6 +43,13 @@ export default function DashboardLayout({ children, user }) {
                         <span className="nav-icon">🏋️</span>
                         <span>Tipos de Clase</span>
                     </Link>
+                    <Link
+                        href="/admin/instructores"
+                        className={`nav-item ${isActive('/admin/instructores') ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon">👨‍🏫</span>
+                        <span>Instructores</span>
+                    </Link>
                 </nav>
 
                 <div className="sidebar-footer">
