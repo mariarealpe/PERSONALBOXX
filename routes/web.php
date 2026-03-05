@@ -44,7 +44,7 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::patch('/tipos-clase/{tipoClase}/toggle', [TipoClaseController::class, 'toggleActivo'])
         ->name('tipos-clase.toggle');
 });
-// ⬆️⬆️⬆️ FIN RUTAS DE ADMIN ⬆️⬆️⬆️
+// ⬆️⬆️⬆️ FIN RUTAS DE  ADMIN ⬆️⬆️⬆️
 
 use App\Http\Controllers\Auth\TwoFactorController;
 
