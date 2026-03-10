@@ -1,12 +1,4 @@
-// ════════════════════════════════════════════════════════════
-// PASO 4 — CREAR EL LAYOUT DEL INSTRUCTOR
-// ════════════════════════════════════════════════════════════
-//
-// Crea el archivo NUEVO en:
-//   resources/js/Layouts/InstructorLayout.jsx
-//
-// (La carpeta Layouts ya existe, solo crea el archivo)
-// ────────────────────────────────────────────────────────────
+
 
 import { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
@@ -92,7 +84,7 @@ export default function InstructorLayout({ children, user }) {
                 <main className="content">{children}</main>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 .dashboard-container {
                     display: flex;
                     min-height: 100vh;

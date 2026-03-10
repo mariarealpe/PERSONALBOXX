@@ -12,7 +12,6 @@ class DashboardController extends Controller
     {
         $user = $request->user()->load('roles');
 
-        // Determinar qué dashboard mostrar según el rol
         if ($user->hasRole('administrador')) {
             return $this->adminDashboard($user);
         } elseif ($user->hasRole('instructor')) {
@@ -32,35 +31,28 @@ class DashboardController extends Controller
         return Inertia::render('Admin/Dashboard', [
             'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
-                'total_clientes'    => \App\Models\User::role('cliente')->count(),
+                'total_clientes'     => \App\Models\User::role('cliente')->count(),
                 'total_instructores' => \App\Models\User::role('instructor')->count(),
-                'clases_hoy'        => \App\Models\Clase::whereDate('fecha_hora_inicio', today())->where('estado', '!=', 'cancelada')->count(),
-                'clases_semana'     => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioSemana, $finSemana])->where('estado', '!=', 'cancelada')->count(),
-                'asistencias_hoy'   => \App\Models\Asistencia::whereDate('hora_registro', today())->count(),
+                'clases_hoy'         => \App\Models\Clase::whereDate('fecha_hora_inicio', today())->where('estado', '!=', 'cancelada')->count(),
+                'clases_semana'      => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioSemana, $finSemana])->where('estado', '!=', 'cancelada')->count(),
+                'asistencias_hoy'    => \App\Models\Asistencia::whereDate('hora_registro', today())->count(),
             ]
         ]);
     }
 
     private function instructorDashboard($user)
     {
-        return Inertia::render('Instructor/Dashboard', [
-            'user' => $user->only(['id', 'name', 'email']),
-            'stats' => [
-                'clases_hoy' => 0,
-                'clases_semana' => 0,
-                'total_alumnos' => 0,
-            ]
-        ]);
+        $controller = new \App\Http\Controllers\Instructor\InstructorController();
+        return $controller->dashboard(request());
     }
-
     private function clienteDashboard($user)
     {
         return Inertia::render('Cliente/Dashboard', [
             'user' => $user->only(['id', 'name', 'email']),
             'stats' => [
                 'reservas_activas' => 0,
-                'clases_tomadas' => 0,
-                'plan_actual' => null,
+                'clases_tomadas'   => 0,
+                'plan_actual'      => null,
             ]
         ]);
     }

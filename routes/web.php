@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\AsistenciaController;
 use App\Http\Controllers\Admin\ReporteController;
 use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Instructor\InstructorController as InstructorPortalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -71,6 +72,26 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::get('/reportes/asistencia-clase', [ReporteController::class, 'asistenciaClase'])->name('reportes.asistencia-clase');
     Route::get('/reportes/liquidacion', [ReporteController::class, 'liquidacionInstructor'])->name('reportes.liquidacion');
 });
+Route::middleware(['auth', 'role:instructor'])
+    ->prefix('instructor')
+    ->name('instructor.')
+    ->group(function () {
+
+        Route::get('/clases', [InstructorPortalController::class, 'clases'])
+            ->name('clases.index');
+
+        Route::get('/asistencias', [InstructorPortalController::class, 'asistencias'])
+            ->name('asistencias.index');
+
+        Route::post('/asistencias', [InstructorPortalController::class, 'registrarAsistencia'])
+            ->name('asistencias.registrar');
+
+        Route::delete('/asistencias/{asistencia}', [InstructorPortalController::class, 'eliminarAsistencia'])
+            ->name('asistencias.eliminar');
+
+        Route::get('/liquidacion', [InstructorPortalController::class, 'liquidacion'])
+            ->name('liquidacion.index');
+    });
 
 Route::get('/2fa', function () {
     return Inertia::render('Auth/TwoFactor');

@@ -15,32 +15,41 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'otp_code',           // ← AGREGAR
-        'otp_expires_at',     // ← AGREGAR
+        'otp_code',
+        'otp_expires_at',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
-        'otp_code',           // ← OCULTAR en respuestas JSON
+        'otp_code',
     ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'otp_expires_at' => 'datetime',  // ← AGREGAR
+            'password'          => 'hashed',
+            'otp_expires_at'    => 'datetime',
         ];
     }
-    // Agregar en app/Models/User.php
+
+    /**
+     * Relación hacia el perfil del instructor (tabla instructores).
+     * Permite usar $user->instructor->tarifa_por_clase, etc.
+     */
+    public function instructor()
+    {
+        return $this->hasOne(Instructor::class, 'user_id');
+    }
+
     public function reservas()
     {
-        return $this->hasMany(\App\Models\Reserva::class, 'cliente_id');
+        return $this->hasMany(Reserva::class, 'cliente_id');
     }
 
     public function clientePlanes()
     {
-        return $this->hasMany(\App\Models\ClientePlan::class, 'cliente_id');
+        return $this->hasMany(ClientePlan::class, 'cliente_id');
     }
 }

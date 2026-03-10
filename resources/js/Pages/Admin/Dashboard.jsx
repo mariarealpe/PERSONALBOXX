@@ -14,12 +14,7 @@ export default function AdminDashboard({ user, stats }) {
     ];
 
     const quickActions = [
-        { icon: '📅', label: 'Nueva Clase', href: '/admin/clases' },
-        { icon: '👤', label: 'Nuevo Cliente', href: '/admin/clientes' },
-        { icon: '👨‍🏫', label: 'Nuevo Instructor', href: '/admin/instructores' },
-        { icon: '✅', label: 'Registrar Asistencia', href: '/admin/asistencias' },
-        { icon: '📈', label: 'Ver Reportes', href: '/admin/reportes' },
-        { icon: '💰', label: 'Liquidación', href: '/admin/reportes/liquidacion' },
+
     ];
 
     return (
@@ -44,7 +39,6 @@ export default function AdminDashboard({ user, stats }) {
                 </div>
 
                 <div style={{ marginBottom: '3rem' }}>
-                    <h2 style={{ color: '#FF1493', fontSize: '1.5rem', fontWeight: 900, margin: '0 0 1.5rem', textTransform: 'uppercase', letterSpacing: 2 }}>Acciones Rápidas</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                         {quickActions.map(a => (
                             <Link key={a.label} href={a.href} style={{ textDecoration: 'none' }}>

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Clase;
-use App\Models\HorarioClase;
 use App\Models\TipoClase;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -15,8 +14,8 @@ class ClaseController extends Controller
 {
     public function index(Request $request)
     {
-        $fecha = $request->input('fecha', now()->format('Y-m-d'));
-        $vista = $request->input('vista', 'semana');
+        $fecha         = $request->input('fecha', now()->format('Y-m-d'));
+        $vista         = $request->input('vista', 'semana');
         $tipo_clase_id = $request->input('tipo_clase_id');
         $instructor_id = $request->input('instructor_id');
 
@@ -43,14 +42,15 @@ class ClaseController extends Controller
 
         $clases = $query->orderBy('fecha_hora_inicio')->get();
 
-        $tiposClase  = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'color']);
-        $instructores = User::role('instructor')->with('instructor')->orderBy('name')->get(['id', 'name']);
+        $tiposClase   = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'color']);
+        // Solo traemos id y name — sin with('instructor') para evitar el error
+        $instructores = User::role('instructor')->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/Clases/Index', [
-            'clases'      => $clases,
-            'tiposClase'  => $tiposClase,
+            'clases'       => $clases,
+            'tiposClase'   => $tiposClase,
             'instructores' => $instructores,
-            'filters'     => [
+            'filters'      => [
                 'fecha'         => $fecha,
                 'vista'         => $vista,
                 'tipo_clase_id' => $tipo_clase_id,
@@ -68,7 +68,7 @@ class ClaseController extends Controller
             'fecha_hora_fin'    => 'required|date|after:fecha_hora_inicio',
             'capacidad_maxima'  => 'required|integer|min:1',
             'sala'              => 'nullable|string|max:100',
-            'estado'            => 'in:programada,en_curso,finalizada,cancelada',
+            'estado'            => 'nullable|in:programada,en_curso,finalizada,cancelada',
         ], [
             'tipo_clase_id.required'     => 'El tipo de clase es obligatorio',
             'instructor_id.required'     => 'El instructor es obligatorio',
@@ -114,13 +114,15 @@ class ClaseController extends Controller
             'fecha_hora_fin'    => 'required|date|after:fecha_hora_inicio',
             'capacidad_maxima'  => 'required|integer|min:1',
             'sala'              => 'nullable|string|max:100',
-            'estado'            => 'in:programada,en_curso,finalizada,cancelada',
+            'estado'            => 'nullable|in:programada,en_curso,finalizada,cancelada',
         ]);
 
         // No reducir capacidad por debajo de reservas actuales
         $totalReservas = $clase->reservasConfirmadas()->count();
         if ($validated['capacidad_maxima'] < $totalReservas) {
-            return back()->withErrors(['capacidad_maxima' => "No puedes reducir la capacidad por debajo de las reservas actuales ({$totalReservas})."]);
+            return back()->withErrors([
+                'capacidad_maxima' => "No puedes reducir la capacidad por debajo de las reservas actuales ({$totalReservas})."
+            ]);
         }
 
         $clase->update($validated);
@@ -130,9 +132,12 @@ class ClaseController extends Controller
 
     public function destroy(Clase $clase)
     {
+        // Cancelar todas las reservas asociadas
         if ($clase->reservasConfirmadas()->count() > 0) {
-            // Cancelar todas las reservas
-            $clase->reservas()->update(['estado' => 'cancelada', 'fecha_cancelacion' => now()]);
+            $clase->reservas()->update([
+                'estado'             => 'cancelada',
+                'fecha_cancelacion'  => now(),
+            ]);
         }
 
         $clase->update(['estado' => 'cancelada']);
@@ -143,8 +148,12 @@ class ClaseController extends Controller
 
     public function toggleEstado(Request $request, Clase $clase)
     {
-        $request->validate(['estado' => 'required|in:programada,en_curso,finalizada,cancelada']);
+        $request->validate([
+            'estado' => 'required|in:programada,en_curso,finalizada,cancelada',
+        ]);
+
         $clase->update(['estado' => $request->estado]);
+
         return redirect()->back()->with('success', '¡Estado de la clase actualizado!');
     }
 }
