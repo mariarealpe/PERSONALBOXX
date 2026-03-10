@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AsistenciaController;
 use App\Http\Controllers\Admin\ReporteController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Instructor\InstructorController as InstructorPortalController;
+use App\Http\Controllers\Cliente\ClienteController as ClientePortalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -91,6 +92,35 @@ Route::middleware(['auth', 'role:instructor'])
 
         Route::get('/liquidacion', [InstructorPortalController::class, 'liquidacion'])
             ->name('liquidacion.index');
+    });
+Route::middleware(['auth', 'role:cliente'])
+    ->prefix('cliente')
+    ->name('cliente.')
+    ->group(function () {
+
+        Route::get('/clases',
+            [ClientePortalController::class, 'clases'])
+            ->name('clases.index');
+
+        Route::post('/clases/reservar',
+            [ClientePortalController::class, 'reservar'])
+            ->name('clases.reservar');
+
+        Route::get('/reservas',
+            [ClientePortalController::class, 'reservas'])
+            ->name('reservas.index');
+
+        Route::patch('/reservas/{reserva}/cancelar',
+            [ClientePortalController::class, 'cancelarReserva'])
+            ->name('reservas.cancelar');
+
+        Route::get('/historial',
+            [ClientePortalController::class, 'historial'])
+            ->name('historial.index');
+
+        Route::get('/mi-plan',
+            [ClientePortalController::class, 'miPlan'])
+            ->name('mi-plan.index');
     });
 
 Route::get('/2fa', function () {

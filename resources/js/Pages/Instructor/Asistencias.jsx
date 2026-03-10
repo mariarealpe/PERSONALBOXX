@@ -69,7 +69,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
     );
 
     const inp = {
-        background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(6,182,212,0.3)',
+        background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(255,20,147,0.3)',
         borderRadius: 8, color: '#fff', padding: '0.625rem 1rem',
         fontSize: '0.875rem', outline: 'none', width: '100%', boxSizing: 'border-box',
     };
@@ -82,7 +82,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
 
                 {/* Título */}
                 <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#06b6d4', margin: '0 0 0.5rem', textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FF1493', margin: '0 0 0.5rem', textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>
                         ✅ Asistencias
                     </h1>
                     <p style={{ color: '#999', margin: 0 }}>Registra la asistencia de tus alumnos</p>
@@ -96,8 +96,8 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                 )}
 
                 {/* Selector de fecha */}
-                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(6,182,212,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <label style={{ color: '#06b6d4', fontWeight: 700, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>
+                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <label style={{ color: '#FF1493', fontWeight: 700, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>
                         📅 Fecha:
                     </label>
                     <input type="date" value={fecha} onChange={e => cambiarFecha(e.target.value)} style={{ ...inp, width: 'auto' }} />
@@ -110,9 +110,9 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                 <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.5rem', alignItems: 'start' }}>
 
                     {/* ── Columna izquierda: lista de clases ── */}
-                    <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(6,182,212,0.3)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 0 20px rgba(6,182,212,0.1)' }}>
-                        <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(6,182,212,0.2)' }}>
-                            <h3 style={{ color: '#06b6d4', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 0 20px rgba(255,20,147,0.1)' }}>
+                        <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(255,20,147,0.2)' }}>
+                            <h3 style={{ color: '#FF1493', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                                 Clases del día
                             </h3>
                         </div>
@@ -124,11 +124,11 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                 <div
                                     key={clase.id}
                                     onClick={() => seleccionarClase(clase.id)}
-                                    style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(6,182,212,0.1)', cursor: 'pointer', background: activa ? 'rgba(6,182,212,0.1)' : 'transparent', borderLeft: activa ? '4px solid #06b6d4' : '4px solid transparent', transition: 'all 0.2s' }}
+                                    style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,20,147,0.1)', cursor: 'pointer', background: activa ? 'rgba(255,20,147,0.1)' : 'transparent', borderLeft: activa ? '4px solid #FF1493' : '4px solid transparent', transition: 'all 0.2s' }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: clase.tipo_clase?.color ?? '#06b6d4', flexShrink: 0 }} />
-                                        <span style={{ color: activa ? '#06b6d4' : '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
+                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: clase.tipo_clase?.color ?? '#FF1493', flexShrink: 0 }} />
+                                        <span style={{ color: activa ? '#FF1493' : '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
                                             {clase.tipo_clase?.nombre}
                                         </span>
                                     </div>
@@ -155,9 +155,9 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                         {claseSeleccionada ? (
                             <>
                                 {/* Resumen de la clase */}
-                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(6,182,212,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                                     <div>
-                                        <h2 style={{ color: '#06b6d4', fontWeight: 900, margin: '0 0 0.25rem', fontSize: '1.25rem' }}>
+                                        <h2 style={{ color: '#FF1493', fontWeight: 900, margin: '0 0 0.25rem', fontSize: '1.25rem' }}>
                                             {claseSeleccionada.tipo_clase?.nombre}
                                         </h2>
                                         <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
@@ -170,7 +170,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                             <p style={{ color: '#666', fontSize: '0.7rem', margin: 0, textTransform: 'uppercase' }}>Asistieron</p>
                                         </div>
                                         <div style={{ textAlign: 'center' }}>
-                                            <p style={{ color: '#06b6d4', fontSize: '1.75rem', fontWeight: 900, margin: 0 }}>{reservas?.length ?? 0}</p>
+                                            <p style={{ color: '#FF1493', fontSize: '1.75rem', fontWeight: 900, margin: 0 }}>{reservas?.length ?? 0}</p>
                                             <p style={{ color: '#666', fontSize: '0.7rem', margin: 0, textTransform: 'uppercase' }}>Reservas</p>
                                         </div>
                                     </div>
@@ -188,9 +188,9 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                 </div>
 
                                 {/* Lista alumnos */}
-                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(6,182,212,0.3)', borderRadius: 12, overflow: 'hidden' }}>
-                                    <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(6,182,212,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <h3 style={{ color: '#06b6d4', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden' }}>
+                                    <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(255,20,147,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <h3 style={{ color: '#FF1493', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                                             Alumnos con Reserva
                                         </h3>
                                         <span style={{ color: '#666', fontSize: '0.8rem' }}>{reservasFilt.length} alumnos</span>
@@ -200,10 +200,10 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                         const asistio      = asistioMap.has(reserva.cliente_id);
                                         const asistenciaObj = (asistencias ?? []).find(a => a.cliente_id === reserva.cliente_id);
                                         return (
-                                            <div key={reserva.id} style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(6,182,212,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: asistio ? 'rgba(34,197,94,0.03)' : 'transparent' }}>
+                                            <div key={reserva.id} style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,20,147,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: asistio ? 'rgba(34,197,94,0.03)' : 'transparent' }}>
                                                 {/* Avatar + nombre */}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: asistio ? 'rgba(34,197,94,0.15)' : 'rgba(6,182,212,0.1)', border: `2px solid ${asistio ? '#22c55e' : 'rgba(6,182,212,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: asistio ? '#22c55e' : '#06b6d4', fontWeight: 900, fontSize: '0.9rem', flexShrink: 0 }}>
+                                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: asistio ? 'rgba(34,197,94,0.15)' : 'rgba(255,20,147,0.1)', border: `2px solid ${asistio ? '#22c55e' : 'rgba(255,20,147,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: asistio ? '#22c55e' : '#FF1493', fontWeight: 900, fontSize: '0.9rem', flexShrink: 0 }}>
                                                         {reserva.cliente?.name?.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
@@ -247,7 +247,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                 </div>
                             </>
                         ) : (
-                            <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(6,182,212,0.2)', borderRadius: 12, padding: '4rem', textAlign: 'center' }}>
+                            <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.2)', borderRadius: 12, padding: '4rem', textAlign: 'center' }}>
                                 <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>← Selecciona una clase para gestionar asistencias</p>
                             </div>
                         )}

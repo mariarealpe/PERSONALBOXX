@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\User;
 
 class DashboardController extends Controller
 {
@@ -29,14 +28,14 @@ class DashboardController extends Controller
         $finSemana    = \Carbon\Carbon::now()->endOfWeek(\Carbon\Carbon::SUNDAY);
 
         return Inertia::render('Admin/Dashboard', [
-            'user' => $user->only(['id', 'name', 'email']),
+            'user' => $user->only(['id','name','email']),
             'stats' => [
                 'total_clientes'     => \App\Models\User::role('cliente')->count(),
                 'total_instructores' => \App\Models\User::role('instructor')->count(),
-                'clases_hoy'         => \App\Models\Clase::whereDate('fecha_hora_inicio', today())->where('estado', '!=', 'cancelada')->count(),
-                'clases_semana'      => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioSemana, $finSemana])->where('estado', '!=', 'cancelada')->count(),
+                'clases_hoy'         => \App\Models\Clase::whereDate('fecha_hora_inicio', today())->where('estado','!=','cancelada')->count(),
+                'clases_semana'      => \App\Models\Clase::whereBetween('fecha_hora_inicio',[$inicioSemana,$finSemana])->where('estado','!=','cancelada')->count(),
                 'asistencias_hoy'    => \App\Models\Asistencia::whereDate('hora_registro', today())->count(),
-            ]
+            ],
         ]);
     }
 
@@ -45,15 +44,10 @@ class DashboardController extends Controller
         $controller = new \App\Http\Controllers\Instructor\InstructorController();
         return $controller->dashboard(request());
     }
+
     private function clienteDashboard($user)
     {
-        return Inertia::render('Cliente/Dashboard', [
-            'user' => $user->only(['id', 'name', 'email']),
-            'stats' => [
-                'reservas_activas' => 0,
-                'clases_tomadas'   => 0,
-                'plan_actual'      => null,
-            ]
-        ]);
+        $controller = new \App\Http\Controllers\Cliente\ClienteController();
+        return $controller->dashboard(request());
     }
 }

@@ -1,259 +1,116 @@
 import { Head } from '@inertiajs/react';
-import DashboardLayout from '@/Layouts/DashboardLayout';
+import { Link } from '@inertiajs/react';
+import ClienteLayout from '@/Layouts/ClienteLayout';
 
-export default function ClienteDashboard({ user, stats }) {
+export default function ClienteDashboard({ user, stats, proximasClases }) {
+    const C = '#FF1493';
+    const fmt      = (n)  => new Intl.NumberFormat('es-CO').format(n ?? 0);
+    const hora     = (dt) => dt ? new Date(dt).toLocaleTimeString('es-CO',  { hour: '2-digit', minute: '2-digit' }) : '';
+    const fmtFecha = (dt) => dt ? new Date(dt).toLocaleDateString('es-CO',  { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+
+    const dias = stats.plan_actual?.dias_restantes ?? 0;
+    const colorPlan = dias <= 5 ? '#ef4444' : dias <= 10 ? '#eab308' : '#22c55e';
+
     return (
-        <DashboardLayout user={user}>
-            <Head title="Dashboard Cliente" />
+        <ClienteLayout user={user}>
+            <Head title="Dashboard" />
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-            <div className="dashboard-cliente">
-                <div className="welcome-section">
-                    <h1 className="page-title">¡Hola, {user.name}!</h1>
-                    <p className="page-subtitle">Tu Progreso en Personal Box</p>
+                <div style={{ marginBottom: '2rem' }}>
+                    <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: C, margin: '0 0 0.25rem', textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>
+                        ¡Hola, {user.name}!
+                    </h1>
+                    <p style={{ color: '#999', margin: 0 }}>Bienvenido a tu portal Personal Box</p>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-icon">📅</div>
-                        <div className="stat-content">
-                            <p className="stat-label">Reservas Activas</p>
-                            <h3 className="stat-value">{stats.reservas_activas}</h3>
+                {/* Stats */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+                    {[
+                        { icon: '📋', label: 'Reservas Activas', value: fmt(stats.reservas_activas) },
+                        { icon: '🏋️', label: 'Clases Tomadas',   value: fmt(stats.clases_tomadas)   },
+                    ].map(s => (
+                        <div key={s.label} style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                            <span style={{ fontSize: '2.5rem' }}>{s.icon}</span>
+                            <div>
+                                <p style={{ color: '#999', fontSize: '0.75rem', margin: '0 0 0.3rem', textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</p>
+                                <h3 style={{ color: C, fontSize: '2.2rem', fontWeight: 900, margin: 0 }}>{s.value}</h3>
+                            </div>
                         </div>
-                    </div>
+                    ))}
 
-                    <div className="stat-card">
-                        <div className="stat-icon">✓</div>
-                        <div className="stat-content">
-                            <p className="stat-label">Clases Tomadas</p>
-                            <h3 className="stat-value">{stats.clases_tomadas}</h3>
-                        </div>
-                    </div>
-
-                    <div className="stat-card plan-card">
-                        <div className="stat-icon">💎</div>
-                        <div className="stat-content">
-                            <p className="stat-label">Plan Actual</p>
-                            <h3 className="stat-value-small">
-                                {stats.plan_actual ? stats.plan_actual : 'Sin Plan'}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-
-                {/* My Classes */}
-                <div className="section">
-                    <h2 className="section-title">Mis Próximas Clases</h2>
-                    <div className="classes-container">
-                        <div className="empty-state-card">
-                            <p className="empty-text">No tienes clases reservadas.</p>
-                            <button className="reserve-button">Reservar Clase</button>
+                    {/* Card plan */}
+                    <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                        <span style={{ fontSize: '2.5rem' }}>💳</span>
+                        <div>
+                            <p style={{ color: '#999', fontSize: '0.75rem', margin: '0 0 0.3rem', textTransform: 'uppercase', letterSpacing: 1 }}>Mi Plan</p>
+                            {stats.plan_actual ? (
+                                <>
+                                    <h3 style={{ color: C, fontSize: '1.2rem', fontWeight: 900, margin: '0 0 0.2rem' }}>{stats.plan_actual.nombre}</h3>
+                                    <p style={{ color: colorPlan, fontSize: '0.8rem', margin: 0, fontWeight: 700 }}>
+                                        {dias > 0 ? `Vence en ${dias} días` : 'Vencido'}
+                                    </p>
+                                </>
+                            ) : (
+                                <h3 style={{ color: '#555', fontSize: '1rem', fontWeight: 600, margin: 0 }}>Sin plan activo</h3>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="section">
-                    <h2 className="section-title">Acciones Rápidas</h2>
-                    <div className="actions-grid">
-                        <button className="action-button">
-                            <span className="action-icon">📅</span>
-                            <span>Reservar Clase</span>
-                        </button>
-                        <button className="action-button">
-                            <span className="action-icon">📋</span>
-                            <span>Mis Reservas</span>
-                        </button>
-                        <button className="action-button">
-                            <span className="action-icon">💎</span>
-                            <span>Mi Plan</span>
-                        </button>
+                {/* Próximas clases */}
+                <div style={{ marginBottom: '3rem' }}>
+                    <h2 style={{ color: C, fontSize: '1.3rem', fontWeight: 900, margin: '0 0 1.5rem', textTransform: 'uppercase', letterSpacing: 2 }}>
+                        Mis Próximas Clases
+                    </h2>
+                    {proximasClases && proximasClases.length > 0 ? (
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            {proximasClases.map(r => (
+                                <div key={r.id} style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ width: 12, height: 12, borderRadius: '50%', background: r.clase?.tipo_clase?.color ?? C, flexShrink: 0 }} />
+                                        <div>
+                                            <p style={{ color: '#fff', fontWeight: 700, margin: '0 0 0.2rem' }}>{r.clase?.tipo_clase?.nombre}</p>
+                                            <p style={{ color: '#999', margin: 0, fontSize: '0.85rem' }}>
+                                                {fmtFecha(r.clase?.fecha_hora_inicio)} · {hora(r.clase?.fecha_hora_inicio)} – {hora(r.clase?.fecha_hora_fin)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid #22c55e', borderRadius: 20, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        ✓ Confirmada
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.2)', borderRadius: 12, padding: '3rem', textAlign: 'center' }}>
+                            <p style={{ color: '#666', margin: '0 0 1rem' }}>No tienes clases reservadas próximamente.</p>
+                            <Link href="/cliente/clases" style={{ background: C, color: '#fff', borderRadius: 8, padding: '0.75rem 1.5rem', fontWeight: 700, textDecoration: 'none' }}>
+                                🏋️ Ver Clases Disponibles
+                            </Link>
+                        </div>
+                    )}
+                </div>
+
+                {/* Acciones rápidas */}
+                <div>
+                    <h2 style={{ color: C, fontSize: '1.3rem', fontWeight: 900, margin: '0 0 1.5rem', textTransform: 'uppercase', letterSpacing: 2 }}>Acciones Rápidas</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+                        {[
+                            { icon: '🏋️', label: 'Reservar Clase',  href: '/cliente/clases'   },
+                            { icon: '📋', label: 'Mis Reservas',    href: '/cliente/reservas' },
+                            { icon: '📈', label: 'Mi Historial',    href: '/cliente/historial'},
+                            { icon: '💳', label: 'Mi Plan',         href: '/cliente/mi-plan'  },
+                        ].map(a => (
+                            <Link key={a.label} href={a.href} style={{ textDecoration: 'none' }}>
+                                <div style={{ background: 'rgba(255,20,147,0.1)', border: `2px solid ${C}`, color: C, padding: '1.5rem 1rem', borderRadius: 12, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                    <span style={{ fontSize: '1.75rem' }}>{a.icon}</span>
+                                    <span>{a.label}</span>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 </div>
             </div>
-
-            <style jsx>{`
-                .dashboard-cliente {
-                    max-width: 1200px;
-                    margin: 0 auto;
-                }
-
-                .welcome-section {
-                    margin-bottom: 2rem;
-                }
-
-                .page-title {
-                    font-size: 2.5rem;
-                    font-weight: 900;
-                    color: #FF1493;
-                    margin: 0 0 0.5rem 0;
-                    text-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
-                }
-
-                .page-subtitle {
-                    color: #999;
-                    font-size: 1rem;
-                    margin: 0;
-                }
-
-                .stats-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                    gap: 1.5rem;
-                    margin-bottom: 3rem;
-                }
-
-                .stat-card {
-                    background: rgba(10, 10, 10, 0.95);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    display: flex;
-                    align-items: center;
-                    gap: 1.5rem;
-                    transition: all 0.3s;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.1);
-                }
-
-                .stat-card:hover {
-                    border-color: #FF1493;
-                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.3);
-                    transform: translateY(-5px);
-                }
-
-                .plan-card {
-                    background: linear-gradient(135deg, rgba(255, 20, 147, 0.1) 0%, rgba(199, 21, 133, 0.1) 100%);
-                }
-
-                .stat-icon {
-                    font-size: 3rem;
-                    filter: drop-shadow(0 0 10px rgba(255, 20, 147, 0.5));
-                }
-
-                .stat-content {
-                    flex: 1;
-                }
-
-                .stat-label {
-                    color: #999;
-                    font-size: 0.875rem;
-                    margin: 0 0 0.5rem 0;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                }
-
-                .stat-value {
-                    color: #FF1493;
-                    font-size: 2.5rem;
-                    font-weight: 900;
-                    margin: 0;
-                    text-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
-                }
-
-                .stat-value-small {
-                    color: #FF1493;
-                    font-size: 1.25rem;
-                    font-weight: 900;
-                    margin: 0;
-                    text-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
-                }
-
-                .section {
-                    margin-bottom: 3rem;
-                }
-
-                .section-title {
-                    color: #FF1493;
-                    font-size: 1.5rem;
-                    font-weight: 900;
-                    margin: 0 0 1.5rem 0;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                }
-
-                .classes-container {
-                    background: rgba(10, 10, 10, 0.95);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 12px;
-                    padding: 2rem;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.1);
-                }
-
-                .empty-state-card {
-                    padding: 2rem;
-                    text-align: center;
-                }
-
-                .empty-text {
-                    color: #666;
-                    margin: 0 0 1.5rem 0;
-                }
-
-                .reserve-button {
-                    background: #FF1493;
-                    color: #000;
-                    border: none;
-                    padding: 1rem 2rem;
-                    border-radius: 8px;
-                    font-weight: 900;
-                    font-size: 1rem;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
-                }
-
-                .reserve-button:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
-                }
-
-                .actions-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 1rem;
-                }
-
-                .action-button {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 2px solid #FF1493;
-                    color: #FF1493;
-                    padding: 1.5rem 1rem;
-                    border-radius: 12px;
-                    font-size: 1rem;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.75rem;
-                }
-
-                .action-button:hover {
-                    background: #FF1493;
-                    color: #000;
-                    box-shadow: 0 0 25px rgba(255, 20, 147, 0.5);
-                    transform: translateY(-3px);
-                }
-
-                .action-icon {
-                    font-size: 2rem;
-                }
-
-                @media (max-width: 768px) {
-                    .page-title {
-                        font-size: 2rem;
-                    }
-
-                    .stats-grid {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .actions-grid {
-                        grid-template-columns: 1fr;
-                    }
-                }
-            `}</style>
-        </DashboardLayout>
+        </ClienteLayout>
     );
 }
