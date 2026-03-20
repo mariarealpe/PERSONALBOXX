@@ -1,6 +1,132 @@
 import { Head, useForm } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 
+// ── Loader de jsPDF (vía script tag, no dynamic import) ───────────────────────
+function loadJsPDF(callback) {
+    if (window.jspdf && window.jspdf.jsPDF) { callback(window.jspdf.jsPDF); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload = () => callback(window.jspdf.jsPDF);
+    document.head.appendChild(s);
+}
+
+function exportarPDF(clases, filters, totales) {
+    loadJsPDF((jsPDF) => {
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const W = doc.internal.pageSize.getWidth();
+        const pink = [255, 20, 147];
+        const dark = [15, 15, 15];
+        const gray = [150, 150, 150];
+
+        doc.setFillColor(...dark);
+        doc.rect(0, 0, W, 28, 'F');
+        doc.setFontSize(18); doc.setTextColor(...pink); doc.setFont('helvetica', 'bold');
+        doc.text('PERSONAL BOX ARMENIA', 14, 12);
+        doc.setFontSize(10); doc.setTextColor(...gray); doc.setFont('helvetica', 'normal');
+        doc.text('Reporte de Asistencia por Clase', 14, 20);
+        doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, W - 14, 20, { align: 'right' });
+
+        doc.setFontSize(9); doc.setTextColor(...gray);
+        doc.text(`Período: ${filters.fecha_inicio} al ${filters.fecha_fin}`, 14, 34);
+
+        const stats = [
+            ['Total Clases', clases.length],
+            ['Total Reservas', totales.reservas],
+            ['Total Asistentes', totales.asistentes],
+        ];
+        let sx = 14;
+        stats.forEach(([label, val]) => {
+            doc.setFillColor(30, 30, 30);
+            doc.roundedRect(sx, 38, 55, 18, 3, 3, 'F');
+            doc.setFontSize(16); doc.setTextColor(...pink); doc.setFont('helvetica', 'bold');
+            doc.text(String(val), sx + 28, 49, { align: 'center' });
+            doc.setFontSize(7); doc.setTextColor(...gray); doc.setFont('helvetica', 'normal');
+            doc.text(label.toUpperCase(), sx + 28, 54, { align: 'center' });
+            sx += 60;
+        });
+
+        const headers = ['#', 'Tipo de Clase', 'Instructor', 'Fecha', 'Cap.', 'Reservas', 'Asistentes', 'Tasa'];
+        const colW    = [10, 50, 45, 40, 15, 22, 25, 20];
+        let y = 64;
+
+        doc.setFillColor(...pink);
+        doc.rect(14, y, W - 28, 8, 'F');
+        doc.setFontSize(7); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold');
+        let cx = 14;
+        headers.forEach((h, i) => { doc.text(h, cx + 2, y + 5.5); cx += colW[i]; });
+
+        y += 8;
+        clases.forEach((c, idx) => {
+            if (y > 185) { doc.addPage(); y = 14; }
+            doc.setFillColor(idx % 2 === 0 ? 20 : 10, idx % 2 === 0 ? 20 : 10, idx % 2 === 0 ? 20 : 10);
+            doc.rect(14, y, W - 28, 8, 'F');
+            const tasa = c.capacidad_maxima > 0 ? Math.round((c.asistencias_count / c.capacidad_maxima) * 100) : 0;
+            const row = [
+                idx + 1,
+                c.tipo_clase?.nombre || '—',
+                c.instructor?.name || '—',
+                c.fecha_hora_inicio ? new Date(c.fecha_hora_inicio).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '—',
+                c.capacidad_maxima,
+                c.reservas_confirmadas_count ?? 0,
+                c.asistencias_count ?? 0,
+                `${tasa}%`,
+            ];
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+            cx = 14;
+            row.forEach((val, i) => {
+                if (i === 7) {
+                    const col = tasa >= 80 ? [34, 197, 94] : tasa >= 50 ? [255, 193, 7] : [239, 68, 68];
+                    doc.setTextColor(...col);
+                } else if (i === 6) {
+                    doc.setTextColor(...pink);
+                } else {
+                    doc.setTextColor(200, 200, 200);
+                }
+                doc.text(String(val), cx + 2, y + 5.5);
+                cx += colW[i];
+            });
+            y += 8;
+        });
+
+        doc.save(`asistencia_clases_${filters.fecha_inicio}_${filters.fecha_fin}.pdf`);
+    });
+}
+
+function exportarExcel(clases, filters, totales) {
+    import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs').then((XLSX) => {
+        const tasa = (a, c) => c > 0 ? Math.round((a / c) * 100) + '%' : '0%';
+        const fmtDate = (d) => d ? new Date(d).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+        const rows = [
+            ['PERSONAL BOX ARMENIA — REPORTE DE ASISTENCIA POR CLASE'],
+            [`Período: ${filters.fecha_inicio} al ${filters.fecha_fin}`],
+            [`Generado: ${new Date().toLocaleString('es-CO')}`],
+            [],
+            ['Total Clases', clases.length, '', 'Total Reservas', totales.reservas, '', 'Total Asistentes', totales.asistentes],
+            [],
+            ['#', 'Tipo de Clase', 'Instructor', 'Fecha', 'Capacidad', 'Reservas', 'Asistentes', 'Tasa Asistencia'],
+            ...clases.map((c, i) => [
+                i + 1,
+                c.tipo_clase?.nombre || '—',
+                c.instructor?.name || '—',
+                fmtDate(c.fecha_hora_inicio),
+                c.capacidad_maxima,
+                c.reservas_confirmadas_count ?? 0,
+                c.asistencias_count ?? 0,
+                tasa(c.asistencias_count, c.capacidad_maxima),
+            ]),
+            [],
+            ['', '', '', '', 'TOTALES', totales.reservas, totales.asistentes, ''],
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [5, 30, 25, 22, 12, 12, 14, 16].map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Asistencia');
+        XLSX.writeFile(wb, `asistencia_clases_${filters.fecha_inicio}_${filters.fecha_fin}.xlsx`);
+    });
+}
+
 export default function AsistenciaClase({ auth, clases, instructores, tiposClase, filters }) {
     const { data, setData, get, processing } = useForm({
         fecha_inicio: filters?.fecha_inicio || new Date().toISOString().split('T')[0],
@@ -9,10 +135,7 @@ export default function AsistenciaClase({ auth, clases, instructores, tiposClase
         tipo_clase_id: filters?.tipo_clase_id || '',
     });
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        get(route('admin.reportes.asistencia-clase'));
-    };
+    const handleSubmit = (e) => { e.preventDefault(); get(route('admin.reportes.asistencia-clase')); };
 
     const fmt = (n) => new Intl.NumberFormat('es-CO').format(n ?? 0);
     const formatDate = (d) => d ? new Date(d).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-';
@@ -26,17 +149,37 @@ export default function AsistenciaClase({ auth, clases, instructores, tiposClase
     const inputStyle = { width: '100%', padding: '0.75rem', background: '#000', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', fontSize: '0.875rem', boxSizing: 'border-box' };
     const labelStyle = { display: 'block', color: '#FF1493', fontSize: '0.7rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 };
     const boxStyle = { background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', boxShadow: '0 0 20px rgba(255,20,147,0.1)' };
+    const exportFilters = filters || { fecha_inicio: data.fecha_inicio, fecha_fin: data.fecha_fin };
 
     return (
         <DashboardLayout user={auth.user}>
             <Head title="Reporte de Asistencia por Clase" />
             <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-                <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FF1493', margin: 0, textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>REPORTE DE ASISTENCIA</h1>
-                    <p style={{ color: '#999', margin: '0.5rem 0 0', fontSize: '0.875rem' }}>Detalle de asistencia por clase en un período</p>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FF1493', margin: 0, textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>REPORTE DE ASISTENCIA</h1>
+                        <p style={{ color: '#999', margin: '0.5rem 0 0', fontSize: '0.875rem' }}>Detalle de asistencia por clase en un período</p>
+                    </div>
+                    {clases.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <span style={{ color: '#666', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Exportar:</span>
+                            <button onClick={() => exportarPDF(clases, exportFilters, totales)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.5)', color: '#ef4444', padding: '0.5rem 1rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
+                                    onMouseOut={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}>
+                                📄 PDF
+                            </button>
+                            <button onClick={() => exportarExcel(clases, exportFilters, totales)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(34,197,94,0.1)', border: '2px solid rgba(34,197,94,0.5)', color: '#22c55e', padding: '0.5rem 1rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}
+                                    onMouseOver={e => e.currentTarget.style.background = 'rgba(34,197,94,0.25)'}
+                                    onMouseOut={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}>
+                                📊 Excel
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Filtros */}
                 <form onSubmit={handleSubmit} style={{ ...boxStyle, marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
                     <div><label style={labelStyle}>Fecha Inicio *</label><input type="date" value={data.fecha_inicio} onChange={e => setData('fecha_inicio', e.target.value)} required style={inputStyle} /></div>
                     <div><label style={labelStyle}>Fecha Fin *</label><input type="date" value={data.fecha_fin} onChange={e => setData('fecha_fin', e.target.value)} required style={inputStyle} /></div>
@@ -59,7 +202,6 @@ export default function AsistenciaClase({ auth, clases, instructores, tiposClase
                     </button>
                 </form>
 
-                {/* Resumen */}
                 {clases.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
                         {[
@@ -78,7 +220,6 @@ export default function AsistenciaClase({ auth, clases, instructores, tiposClase
                     </div>
                 )}
 
-                {/* Tabla */}
                 <div style={{ ...boxStyle, padding: 0, overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead style={{ background: 'rgba(255,20,147,0.1)' }}>

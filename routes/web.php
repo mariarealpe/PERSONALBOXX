@@ -72,6 +72,17 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
     Route::get('/reportes/asistencia-clase', [ReporteController::class, 'asistenciaClase'])->name('reportes.asistencia-clase');
     Route::get('/reportes/liquidacion', [ReporteController::class, 'liquidacionInstructor'])->name('reportes.liquidacion');
+    Route::get('/reportes/liquidacion/historial',
+        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'index'])
+        ->name('reportes.liquidacion.historial');
+
+    Route::post('/reportes/liquidacion/historial',
+        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'store'])
+        ->name('reportes.liquidacion.historial.store');
+
+    Route::delete('/reportes/liquidacion/historial/{liquidacion}',
+        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'destroy'])
+        ->name('reportes.liquidacion.historial.destroy');
 });
 Route::middleware(['auth', 'role:instructor'])
     ->prefix('instructor')
