@@ -7,8 +7,9 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
     const [editingInstructor, setEditingInstructor] = useState(null);
     const [search, setSearch] = useState(filters.search || '');
     const [previewFoto, setPreviewFoto] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false); // reemplaza `processing`
 
-    const { data, setData, post, put, processing, errors, reset } = useForm({
+    const { data, setData, errors, setError, clearErrors, reset } = useForm({
         name: '',
         email: '',
         password: '',
@@ -23,6 +24,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
 
     const openCreateModal = () => {
         reset();
+        clearErrors();
         setPreviewFoto(null);
         setEditingInstructor(null);
         setShowModal(true);
@@ -41,6 +43,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
             especialidades_ids: instructor.especialidades.map(e => e.id),
             activo: instructor.activo,
         });
+        clearErrors();
         setPreviewFoto(instructor.foto_url);
         setEditingInstructor(instructor);
         setShowModal(true);
@@ -50,11 +53,18 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         setShowModal(false);
         setEditingInstructor(null);
         setPreviewFoto(null);
+        setIsSubmitting(false);
         reset();
+        clearErrors();
     };
 
+    // ── FIX: router.post() con FormData directo ──────────────────────────────
+    // El método post() del useForm ignora el parámetro `data: formData` y envía
+    // los campos internos del hook en lugar del FormData construido manualmente.
+    // Con router.post() el FormData va como segundo argumento y funciona bien.
     const handleSubmit = (e) => {
         e.preventDefault();
+        clearErrors();
 
         const formData = new FormData();
         formData.append('name', data.name);
@@ -71,21 +81,38 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
             formData.append(`especialidades_ids[${index}]`, id);
         });
 
+        setIsSubmitting(true);
+
         if (editingInstructor) {
             formData.append('_method', 'PUT');
-            post(route('admin.instructores.update', editingInstructor.id), {
-                data: formData,
-                onSuccess: () => closeModal(),
-                forceFormData: true,
-            });
+            router.post(
+                route('admin.instructores.update', editingInstructor.id),
+                formData,
+                {
+                    forceFormData: true,
+                    onSuccess: () => closeModal(),
+                    onError: (errs) => {
+                        setIsSubmitting(false);
+                        Object.keys(errs).forEach(k => setError(k, errs[k]));
+                    },
+                }
+            );
         } else {
-            post(route('admin.instructores.store'), {
-                data: formData,
-                onSuccess: () => closeModal(),
-                forceFormData: true,
-            });
+            router.post(
+                route('admin.instructores.store'),
+                formData,
+                {
+                    forceFormData: true,
+                    onSuccess: () => closeModal(),
+                    onError: (errs) => {
+                        setIsSubmitting(false);
+                        Object.keys(errs).forEach(k => setError(k, errs[k]));
+                    },
+                }
+            );
         }
     };
+    // ─────────────────────────────────────────────────────────────────────────
 
     const handleDelete = (instructor) => {
         if (confirm(`¿Estás segura de eliminar al instructor "${instructor.user.name}"?`)) {
@@ -130,6 +157,12 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         setData('especialidades_ids', current);
     };
 
+    const formatCOP = (valor) => {
+        const num = parseFloat(valor);
+        if (!num || num === 0) return <span style={{ color: '#555', fontStyle: 'italic', fontSize: '0.8rem' }}>No definida</span>;
+        return <span className="tarifa-value">${new Intl.NumberFormat('es-CO').format(num)} COP</span>;
+    };
+
     return (
         <DashboardLayout user={auth.user}>
             <Head title="Gestión de Instructores" />
@@ -165,7 +198,9 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                         <tr>
                             <th>Instructor</th>
                             <th>Especialidades</th>
-                            <th>Tarifas</th>
+                            {/* CAMBIO: dos columnas separadas en lugar de una "Tarifas" */}
+                            <th style={{ textAlign: 'center' }}>💼 Tarifa por Clase</th>
+                            <th style={{ textAlign: 'center' }}>👥 Tarifa por Asistente</th>
                             <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
@@ -173,7 +208,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                         <tbody>
                         {instructores.data.length === 0 ? (
                             <tr>
-                                <td colSpan="5" className="empty-state">
+                                <td colSpan="6" className="empty-state">
                                     No hay instructores registrados
                                 </td>
                             </tr>
@@ -217,25 +252,17 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                             )}
                                         </div>
                                     </td>
-                                    <td>
-                                        <div className="tarifas">
-                                            {instructor.tarifa_por_clase && (
-                                                <p className="tarifa-item">
-                                                    <span className="tarifa-label">Por clase:</span>
-                                                    <span className="tarifa-value">${new Intl.NumberFormat('es-CO').format(instructor.tarifa_por_clase)}</span>
-                                                </p>
-                                            )}
-                                            {instructor.tarifa_por_asistente && (
-                                                <p className="tarifa-item">
-                                                    <span className="tarifa-label">Por asistente:</span>
-                                                    <span className="tarifa-value">${new Intl.NumberFormat('es-CO').format(instructor.tarifa_por_asistente)}</span>
-                                                </p>
-                                            )}
-                                            {!instructor.tarifa_por_clase && !instructor.tarifa_por_asistente && (
-                                                <span className="no-tarifa">Sin tarifas</span>
-                                            )}
-                                        </div>
+
+                                    {/* CAMBIO: columna propia para tarifa por clase */}
+                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                                        {formatCOP(instructor.tarifa_por_clase)}
                                     </td>
+
+                                    {/* CAMBIO: columna propia para tarifa por asistente */}
+                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                                        {formatCOP(instructor.tarifa_por_asistente)}
+                                    </td>
+
                                     <td>
                                         <button
                                             onClick={() => handleToggle(instructor)}
@@ -285,7 +312,10 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
 
                 {showModal && (
                     <div className="modal-overlay" onClick={closeModal}>
+                        {/* El modal usa flex column para que el footer quede siempre visible */}
                         <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+                            {/* Header sticky arriba */}
                             <div className="modal-header">
                                 <h2 className="modal-title">
                                     {editingInstructor ? 'Editar Instructor' : 'Nuevo Instructor'}
@@ -293,184 +323,191 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                 <button onClick={closeModal} className="btn-close">✕</button>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="modal-form">
-                                {/* Foto de perfil */}
-                                <div className="form-group">
-                                    <label className="label">Foto de perfil</label>
-                                    <div className="foto-upload">
-                                        <div className="foto-preview">
-                                            {previewFoto ? (
-                                                <img src={previewFoto} alt="Preview" />
-                                            ) : (
-                                                <div className="foto-placeholder">
-                                                    <span>📷</span>
-                                                    <p>Sin foto</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFotoChange}
-                                            className="foto-input"
-                                            id="foto-input"
-                                        />
-                                        <label htmlFor="foto-input" className="foto-button">
-                                            Seleccionar imagen
-                                        </label>
-                                    </div>
-                                    {errors.foto && <p className="error">{errors.foto}</p>}
-                                </div>
+                            {/* Form ocupa todo el espacio restante con scroll interno */}
+                            <form onSubmit={handleSubmit} className="modal-form-wrapper">
 
-                                {/* Datos personales */}
-                                <div className="form-row">
+                                {/* Zona scrolleable */}
+                                <div className="modal-body">
+
+                                    {/* Foto de perfil */}
                                     <div className="form-group">
-                                        <label className="label">Nombre completo *</label>
+                                        <label className="label">Foto de perfil</label>
+                                        <div className="foto-upload">
+                                            <div className="foto-preview">
+                                                {previewFoto ? (
+                                                    <img src={previewFoto} alt="Preview" />
+                                                ) : (
+                                                    <div className="foto-placeholder">
+                                                        <span>📷</span>
+                                                        <p>Sin foto</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFotoChange}
+                                                className="foto-input"
+                                                id="foto-input"
+                                            />
+                                            <label htmlFor="foto-input" className="foto-button">
+                                                Seleccionar imagen
+                                            </label>
+                                        </div>
+                                        {errors.foto && <p className="error">{errors.foto}</p>}
+                                    </div>
+
+                                    {/* Datos personales */}
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label className="label">Nombre completo *</label>
+                                            <input
+                                                type="text"
+                                                value={data.name}
+                                                onChange={(e) => setData('name', e.target.value)}
+                                                className="input"
+                                                placeholder="Ej: Carlos Martínez"
+                                                required
+                                            />
+                                            {errors.name && <p className="error">{errors.name}</p>}
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label className="label">Correo electrónico *</label>
+                                            <input
+                                                type="email"
+                                                value={data.email}
+                                                onChange={(e) => setData('email', e.target.value)}
+                                                className="input"
+                                                placeholder="instructor@personalbox.com"
+                                                required
+                                            />
+                                            {errors.email && <p className="error">{errors.email}</p>}
+                                        </div>
+                                    </div>
+
+                                    {/* Contraseña */}
+                                    <div className="form-group">
+                                        <label className="label">
+                                            Contraseña {!editingInstructor && '*'}
+                                            {editingInstructor && <span className="label-hint">(dejar en blanco para mantener la actual)</span>}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={data.password}
+                                            onChange={(e) => setData('password', e.target.value)}
+                                            className="input"
+                                            placeholder="Mínimo 8 caracteres"
+                                            required={!editingInstructor}
+                                        />
+                                        {errors.password && <p className="error">{errors.password}</p>}
+                                    </div>
+
+                                    {/* Especialidad principal */}
+                                    <div className="form-group">
+                                        <label className="label">Especialidad principal</label>
                                         <input
                                             type="text"
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
+                                            value={data.especialidad}
+                                            onChange={(e) => setData('especialidad', e.target.value)}
                                             className="input"
-                                            placeholder="Ej: Carlos Martínez"
-                                            required
+                                            placeholder="Ej: Crossfit y Musculación"
                                         />
-                                        {errors.name && <p className="error">{errors.name}</p>}
+                                        {errors.especialidad && <p className="error">{errors.especialidad}</p>}
                                     </div>
 
+                                    {/* Tipos de clase que puede impartir */}
                                     <div className="form-group">
-                                        <label className="label">Correo electrónico *</label>
-                                        <input
-                                            type="email"
-                                            value={data.email}
-                                            onChange={(e) => setData('email', e.target.value)}
-                                            className="input"
-                                            placeholder="instructor@personalbox.com"
-                                            required
-                                        />
-                                        {errors.email && <p className="error">{errors.email}</p>}
+                                        <label className="label">Tipos de clase que puede impartir</label>
+                                        <div className="tipos-clase-grid">
+                                            {tiposClase.map((tipo) => (
+                                                <label key={tipo.id} className="tipo-clase-checkbox">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={data.especialidades_ids.includes(tipo.id)}
+                                                        onChange={() => toggleEspecialidad(tipo.id)}
+                                                    />
+                                                    <span
+                                                        className="tipo-clase-badge"
+                                                        style={{
+                                                            backgroundColor: data.especialidades_ids.includes(tipo.id) ? tipo.color : 'rgba(255, 20, 147, 0.1)',
+                                                            borderColor: tipo.color
+                                                        }}
+                                                    >
+                                                        {tipo.nombre}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        {errors.especialidades_ids && <p className="error">{errors.especialidades_ids}</p>}
                                     </div>
-                                </div>
 
-                                {/* Contraseña */}
-                                <div className="form-group">
-                                    <label className="label">
-                                        Contraseña {!editingInstructor && '*'}
-                                        {editingInstructor && <span className="label-hint">(dejar en blanco para mantener la actual)</span>}
-                                    </label>
-                                    <input
-                                        type="password"
-                                        value={data.password}
-                                        onChange={(e) => setData('password', e.target.value)}
-                                        className="input"
-                                        placeholder="Mínimo 8 caracteres"
-                                        required={!editingInstructor}
-                                    />
-                                    {errors.password && <p className="error">{errors.password}</p>}
-                                </div>
-
-                                {/* Especialidad principal */}
-                                <div className="form-group">
-                                    <label className="label">Especialidad principal</label>
-                                    <input
-                                        type="text"
-                                        value={data.especialidad}
-                                        onChange={(e) => setData('especialidad', e.target.value)}
-                                        className="input"
-                                        placeholder="Ej: Crossfit y Musculación"
-                                    />
-                                    {errors.especialidad && <p className="error">{errors.especialidad}</p>}
-                                </div>
-
-                                {/* Tipos de clase que puede impartir */}
-                                <div className="form-group">
-                                    <label className="label">Tipos de clase que puede impartir</label>
-                                    <div className="tipos-clase-grid">
-                                        {tiposClase.map((tipo) => (
-                                            <label key={tipo.id} className="tipo-clase-checkbox">
+                                    {/* Tarifas */}
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label className="label">Tarifa por clase</label>
+                                            <div className="input-with-prefix">
+                                                <span className="input-prefix">$</span>
                                                 <input
-                                                    type="checkbox"
-                                                    checked={data.especialidades_ids.includes(tipo.id)}
-                                                    onChange={() => toggleEspecialidad(tipo.id)}
+                                                    type="number"
+                                                    value={data.tarifa_por_clase}
+                                                    onChange={(e) => setData('tarifa_por_clase', e.target.value)}
+                                                    className="input input-with-prefix-field"
+                                                    placeholder="50000"
+                                                    min="0"
+                                                    step="1000"
                                                 />
-                                                <span
-                                                    className="tipo-clase-badge"
-                                                    style={{
-                                                        backgroundColor: data.especialidades_ids.includes(tipo.id) ? tipo.color : 'rgba(255, 20, 147, 0.1)',
-                                                        borderColor: tipo.color
-                                                    }}
-                                                >
-                                                    {tipo.nombre}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    {errors.especialidades_ids && <p className="error">{errors.especialidades_ids}</p>}
-                                </div>
-
-                                {/* Tarifas */}
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label className="label">Tarifa por clase</label>
-                                        <div className="input-with-prefix">
-                                            <span className="input-prefix">$</span>
-                                            <input
-                                                type="number"
-                                                value={data.tarifa_por_clase}
-                                                onChange={(e) => setData('tarifa_por_clase', e.target.value)}
-                                                className="input input-with-prefix-field"
-                                                placeholder="50000"
-                                                min="0"
-                                                step="1000"
-                                            />
+                                            </div>
+                                            {errors.tarifa_por_clase && <p className="error">{errors.tarifa_por_clase}</p>}
                                         </div>
-                                        {errors.tarifa_por_clase && <p className="error">{errors.tarifa_por_clase}</p>}
-                                    </div>
 
-                                    <div className="form-group">
-                                        <label className="label">Tarifa por asistente</label>
-                                        <div className="input-with-prefix">
-                                            <span className="input-prefix">$</span>
-                                            <input
-                                                type="number"
-                                                value={data.tarifa_por_asistente}
-                                                onChange={(e) => setData('tarifa_por_asistente', e.target.value)}
-                                                className="input input-with-prefix-field"
-                                                placeholder="5000"
-                                                min="0"
-                                                step="1000"
-                                            />
+                                        <div className="form-group">
+                                            <label className="label">Tarifa por asistente</label>
+                                            <div className="input-with-prefix">
+                                                <span className="input-prefix">$</span>
+                                                <input
+                                                    type="number"
+                                                    value={data.tarifa_por_asistente}
+                                                    onChange={(e) => setData('tarifa_por_asistente', e.target.value)}
+                                                    className="input input-with-prefix-field"
+                                                    placeholder="5000"
+                                                    min="0"
+                                                    step="1000"
+                                                />
+                                            </div>
+                                            {errors.tarifa_por_asistente && <p className="error">{errors.tarifa_por_asistente}</p>}
                                         </div>
-                                        {errors.tarifa_por_asistente && <p className="error">{errors.tarifa_por_asistente}</p>}
                                     </div>
-                                </div>
 
-                                {/* Biografía */}
-                                <div className="form-group">
-                                    <label className="label">Biografía</label>
-                                    <textarea
-                                        value={data.biografia}
-                                        onChange={(e) => setData('biografia', e.target.value)}
-                                        className="textarea"
-                                        rows="4"
-                                        placeholder="Describe la experiencia y certificaciones del instructor..."
-                                    />
-                                    {errors.biografia && <p className="error">{errors.biografia}</p>}
-                                </div>
-
-                                {/* Estado activo */}
-                                <div className="form-group">
-                                    <label className="checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.activo}
-                                            onChange={(e) => setData('activo', e.target.checked)}
-                                            className="checkbox"
+                                    {/* Biografía */}
+                                    <div className="form-group">
+                                        <label className="label">Biografía</label>
+                                        <textarea
+                                            value={data.biografia}
+                                            onChange={(e) => setData('biografia', e.target.value)}
+                                            className="textarea"
+                                            rows="4"
+                                            placeholder="Describe la experiencia y certificaciones del instructor..."
                                         />
-                                        <span>Activo (puede impartir clases)</span>
-                                    </label>
-                                </div>
+                                        {errors.biografia && <p className="error">{errors.biografia}</p>}
+                                    </div>
 
-                                {/* Botones */}
+                                    {/* Estado activo */}
+                                    <div className="form-group">
+                                        <label className="checkbox-label">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.activo}
+                                                onChange={(e) => setData('activo', e.target.checked)}
+                                                className="checkbox"
+                                            />
+                                            <span>Activo (puede impartir clases)</span>
+                                        </label>
+                                    </div>
+
+                                </div>{/* fin modal-body */}
+
+                                {/* Footer sticky SIEMPRE visible en la parte inferior */}
                                 <div className="modal-footer">
                                     <button
                                         type="button"
@@ -481,13 +518,15 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                     </button>
                                     <button
                                         type="submit"
-                                        disabled={processing}
+                                        disabled={isSubmitting}
                                         className="btn-submit"
                                     >
-                                        {processing ? 'Guardando...' : 'Guardar Instructor'}
+                                        {isSubmitting ? 'Guardando...' : 'Guardar Instructor'}
                                     </button>
                                 </div>
-                            </form>
+
+                            </form>{/* fin modal-form-wrapper */}
+
                         </div>
                     </div>
                 )}
@@ -704,33 +743,11 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     font-style: italic;
                 }
 
-                .tarifas {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.25rem;
-                }
-
-                .tarifa-item {
-                    margin: 0;
-                    font-size: 0.875rem;
-                    display: flex;
-                    justify-content: space-between;
-                    gap: 0.5rem;
-                }
-
-                .tarifa-label {
-                    color: #999;
-                }
-
+                /* CAMBIO: nuevo estilo para el valor de tarifa en su propia celda */
                 .tarifa-value {
                     color: #FF1493;
                     font-weight: 700;
-                }
-
-                .no-tarifa {
-                    color: #666;
-                    font-size: 0.875rem;
-                    font-style: italic;
+                    font-size: 0.95rem;
                 }
 
                 .badge {
@@ -824,6 +841,11 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     cursor: not-allowed;
                 }
 
+                /* ══════════════════════════════
+                   MODAL — estructura flex column
+                   para que el footer sea siempre
+                   visible sin scroll
+                ══════════════════════════════ */
                 .modal-overlay {
                     position: fixed;
                     inset: 0;
@@ -833,7 +855,6 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     justify-content: center;
                     z-index: 1000;
                     padding: 1rem;
-                    overflow-y: auto;
                 }
 
                 .modal {
@@ -842,18 +863,22 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     border-radius: 12px;
                     width: 100%;
                     max-width: 700px;
+                    height: 90vh;
                     max-height: 90vh;
-                    overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
                     box-shadow: 0 0 40px rgba(255, 20, 147, 0.5);
-                    margin: auto;
+                    overflow: hidden;
                 }
 
                 .modal-header {
+                    flex-shrink: 0;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     padding: 1.5rem;
                     border-bottom: 1px solid rgba(255, 20, 147, 0.3);
+                    background: rgba(10, 10, 10, 0.98);
                 }
 
                 .modal-title {
@@ -877,8 +902,67 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     transform: rotate(90deg);
                 }
 
-                .modal-form {
+                .modal-form-wrapper {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    min-height: 0;
+                }
+
+                .modal-body {
+                    flex: 1;
+                    overflow-y: auto;
                     padding: 1.5rem;
+                    min-height: 0;
+                }
+
+                .modal-footer {
+                    flex-shrink: 0;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 1rem;
+                    padding: 1.25rem 1.5rem;
+                    border-top: 2px solid rgba(255, 20, 147, 0.3);
+                    background: rgba(10, 10, 10, 0.98);
+                }
+
+                .btn-cancel {
+                    background: rgba(255, 20, 147, 0.1);
+                    border: 2px solid rgba(255, 20, 147, 0.3);
+                    color: #FF1493;
+                    padding: 0.875rem 1.5rem;
+                    border-radius: 8px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+
+                .btn-cancel:hover {
+                    border-color: #FF1493;
+                    background: rgba(255, 20, 147, 0.2);
+                }
+
+                .btn-submit {
+                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
+                    color: #000;
+                    border: none;
+                    padding: 0.875rem 1.5rem;
+                    border-radius: 8px;
+                    font-weight: 900;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
+                }
+
+                .btn-submit:hover:not(:disabled) {
+                    transform: translateY(-3px);
+                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
+                }
+
+                .btn-submit:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
                 }
 
                 .form-group {
@@ -918,6 +1002,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     color: #fff;
                     font-size: 0.875rem;
                     transition: all 0.3s;
+                    box-sizing: border-box;
                 }
 
                 .input:focus, .textarea:focus {
@@ -938,6 +1023,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     border-radius: 50%;
                     overflow: hidden;
                     border: 2px solid rgba(255, 20, 147, 0.3);
+                    flex-shrink: 0;
                 }
 
                 .foto-preview img {
@@ -1060,52 +1146,6 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     margin-top: 0.5rem;
                 }
 
-                .modal-footer {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: 1rem;
-                    padding-top: 1.5rem;
-                    border-top: 1px solid rgba(255, 20, 147, 0.3);
-                }
-
-                .btn-cancel {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    color: #FF1493;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                }
-
-                .btn-cancel:hover {
-                    border-color: #FF1493;
-                    background: rgba(255, 20, 147, 0.2);
-                }
-
-                .btn-submit {
-                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
-                    color: #000;
-                    border: none;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
-                    font-weight: 900;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
-                }
-
-                .btn-submit:hover:not(:disabled) {
-                    transform: translateY(-3px);
-                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
-                }
-
-                .btn-submit:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
                 @media (max-width: 768px) {
                     .title {
                         font-size: 1.5rem;
@@ -1124,7 +1164,16 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     }
 
                     .table {
-                        min-width: 800px;
+                        min-width: 900px;
+                    }
+
+                    .modal-footer {
+                        flex-direction: column;
+                    }
+
+                    .btn-cancel, .btn-submit {
+                        width: 100%;
+                        text-align: center;
                     }
                 }
             `}</style>

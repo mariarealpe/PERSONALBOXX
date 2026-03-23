@@ -10,14 +10,36 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
     const [search, setSearch] = useState(filters.search || '');
 
     const { data, setData, post, put, processing, errors, reset } = useForm({ name: '', email: '', password: '' });
-    const planForm = useForm({ plan_id: '', fecha_inicio: new Date().toISOString().split('T')[0] });
+
+    const planForm = useForm({
+        plan_id:           '',
+        fecha_inicio:      new Date().toISOString().split('T')[0],
+        fecha_vencimiento: '',
+    });
 
     const openCreate = () => { reset(); setEditingCliente(null); setShowModal(true); };
     const openEdit = (c) => { setData({ name: c.name, email: c.email, password: '' }); setEditingCliente(c); setShowModal(true); };
     const closeModal = () => { setShowModal(false); setEditingCliente(null); reset(); };
 
-    const openPlanModal = (c) => { setSelectedCliente(c); planForm.reset(); planForm.setData('fecha_inicio', new Date().toISOString().split('T')[0]); setShowPlanModal(true); };
+    const openPlanModal = (c) => {
+        setSelectedCliente(c);
+        planForm.reset();
+        planForm.setData({
+            plan_id:           '',
+            fecha_inicio:      new Date().toISOString().split('T')[0],
+            fecha_vencimiento: '',
+        });
+        setShowPlanModal(true);
+    };
     const closePlanModal = () => { setShowPlanModal(false); setSelectedCliente(null); };
+
+    // Sugerir fecha de vencimiento 30 días después del inicio
+    const sugerirFechaFin = () => {
+        if (!planForm.data.fecha_inicio) return;
+        const inicio = new Date(planForm.data.fecha_inicio + 'T00:00:00');
+        inicio.setDate(inicio.getDate() + 30);
+        planForm.setData('fecha_vencimiento', inicio.toISOString().split('T')[0]);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -41,8 +63,6 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
         e.preventDefault();
         router.get(route('admin.clientes.index'), { search }, { preserveState: true, replace: true });
     };
-
-    const planActivo = (c) => c.client_planes?.[0] || c.clientePlanes?.[0] || null;
 
     const inputStyle = { width: '100%', padding: '0.875rem', background: '#000', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', fontSize: '0.875rem', boxSizing: 'border-box' };
     const labelStyle = { display: 'block', color: '#FF1493', fontSize: '0.7rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 };
@@ -79,7 +99,8 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
                         {clientes.data.length === 0 ? (
                             <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>No hay clientes registrados</td></tr>
                         ) : clientes.data.map(c => {
-                            const pa = planActivo(c);
+                            // CAMBIO: usar plan_activo que viene mapeado del controlador
+                            const pa = c.plan_activo;
                             return (
                                 <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,20,147,0.1)' }}>
                                     <td style={{ padding: '1rem' }}>
@@ -91,18 +112,31 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
                                         </div>
                                     </td>
                                     <td style={{ padding: '1rem', color: '#999', fontSize: '0.875rem' }}>{c.email}</td>
+
+                                    {/* Plan Activo */}
                                     <td style={{ padding: '1rem' }}>
                                         {pa ? (
                                             <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid #22c55e', padding: '0.375rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700 }}>
-                                                    {pa.plan?.nombre || 'Plan activo'}
-                                                </span>
+                                                {pa.nombre}
+                                            </span>
                                         ) : (
                                             <span style={{ color: '#666', fontSize: '0.875rem' }}>Sin plan</span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '1rem', color: pa ? '#ccc' : '#666', fontSize: '0.875rem' }}>
-                                        {pa ? new Date(pa.fecha_vencimiento).toLocaleDateString('es-CO') : '-'}
+
+                                    {/* Vencimiento con color según cercanía */}
+                                    <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
+                                        {pa ? (() => {
+                                            const dias = Math.ceil((new Date(pa.fecha_vencimiento) - new Date()) / (1000 * 60 * 60 * 24));
+                                            const color = dias <= 5 ? '#ef4444' : dias <= 10 ? '#eab308' : '#ccc';
+                                            return (
+                                                <span style={{ color, fontWeight: dias <= 10 ? 700 : 400 }}>
+                                                    {new Date(pa.fecha_vencimiento).toLocaleDateString('es-CO')}
+                                                </span>
+                                            );
+                                        })() : <span style={{ color: '#555' }}>-</span>}
                                     </td>
+
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <button onClick={() => openPlanModal(c)} style={{ background: 'rgba(255,193,7,0.1)', border: '1px solid #ffc107', color: '#ffc107', padding: '0.5rem 0.75rem', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }} title="Asignar Plan">💎 Plan</button>
@@ -127,7 +161,7 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
                     </div>
                 )}
 
-                {/* Modal Cliente */}
+                {/* Modal Cliente — sin cambios */}
                 {showModal && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={closeModal}>
                         <div style={{ background: 'rgba(10,10,10,0.98)', border: '2px solid #FF1493', borderRadius: 12, width: '100%', maxWidth: 500, boxShadow: '0 0 40px rgba(255,20,147,0.5)' }} onClick={e => e.stopPropagation()}>
@@ -157,6 +191,8 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
                                 <button onClick={closePlanModal} style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
                             </div>
                             <form onSubmit={handlePlanSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                                {/* Plan */}
                                 <div>
                                     <label style={{ ...labelStyle, color: '#ffc107' }}>Plan *</label>
                                     <select value={planForm.data.plan_id} onChange={e => planForm.setData('plan_id', e.target.value)} required style={{ ...inputStyle, color: planForm.data.plan_id ? '#fff' : '#666' }}>
@@ -165,11 +201,28 @@ export default function ClientesIndex({ auth, clientes, planes, filters }) {
                                     </select>
                                     {planForm.errors.plan_id && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4 }}>{planForm.errors.plan_id}</p>}
                                 </div>
+
+                                {/* Fecha inicio */}
                                 <div>
                                     <label style={{ ...labelStyle, color: '#ffc107' }}>Fecha de Inicio *</label>
                                     <input type="date" value={planForm.data.fecha_inicio} onChange={e => planForm.setData('fecha_inicio', e.target.value)} required style={inputStyle} />
-                                    <p style={{ color: '#666', fontSize: '0.75rem', marginTop: 4 }}>El plan vence 30 días después del inicio.</p>
+                                    {planForm.errors.fecha_inicio && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4 }}>{planForm.errors.fecha_inicio}</p>}
                                 </div>
+
+                                {/* Fecha vencimiento con botón sugerir */}
+                                <div>
+                                    <label style={{ ...labelStyle, color: '#ffc107' }}>Fecha de Vencimiento *</label>
+                                    <input type="date" value={planForm.data.fecha_vencimiento} onChange={e => planForm.setData('fecha_vencimiento', e.target.value)} required style={inputStyle} />
+                                    <button
+                                        type="button"
+                                        onClick={sugerirFechaFin}
+                                        style={{ background: 'none', border: 'none', color: '#ffc107', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', padding: '4px 0 0', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                                    >
+                                        📅 Sugerir 30 días desde el inicio
+                                    </button>
+                                    {planForm.errors.fecha_vencimiento && <p style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: 4 }}>{planForm.errors.fecha_vencimiento}</p>}
+                                </div>
+
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,193,7,0.3)' }}>
                                     <button type="button" onClick={closePlanModal} style={{ background: 'rgba(255,193,7,0.1)', border: '2px solid rgba(255,193,7,0.3)', color: '#ffc107', padding: '0.875rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>Cancelar</button>
                                     <button type="submit" disabled={planForm.processing} style={{ background: 'linear-gradient(135deg,#ffc107,#e6a800)', color: '#000', border: 'none', padding: '0.875rem 1.5rem', borderRadius: 8, fontWeight: 900, cursor: 'pointer', opacity: planForm.processing ? 0.5 : 1 }}>{planForm.processing ? 'Asignando...' : 'Asignar Plan'}</button>

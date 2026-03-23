@@ -87,15 +87,6 @@ class DashboardController extends Controller
                 'total' => $h->total,
             ]);
 
-        $asistenciaPorMes = collect(range(5, 0))->map(function ($mesesAtras) {
-            $fecha = \Carbon\Carbon::now()->subMonths($mesesAtras);
-            return [
-                'mes'   => $fecha->locale('es')->isoFormat('MMM'),
-                'total' => \App\Models\Asistencia::whereYear('hora_registro', $fecha->year)
-                    ->whereMonth('hora_registro', $fecha->month)->count(),
-            ];
-        });
-
         $proximasClases = \App\Models\Clase::with(['tipoClase', 'instructor'])
             ->withCount(['reservas as reservas_count' => fn($q) => $q->where('estado','confirmada')])
             ->whereDate('fecha_hora_inicio', $hoy)
@@ -113,7 +104,7 @@ class DashboardController extends Controller
             ]);
 
         return Inertia::render('Admin/Dashboard', [
-            'user'             => $user->only(['id','name','email']),
+            'user'             => $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url],
             'stats'            => $stats,
             'asistenciaPorDia' => $asistenciaPorDia,
             'asistenciaPorMes' => $asistenciaPorMes,

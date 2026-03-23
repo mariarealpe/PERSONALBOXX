@@ -19,19 +19,23 @@ class ClaseController extends Controller
         $tipo_clase_id = $request->input('tipo_clase_id');
         $instructor_id = $request->input('instructor_id');
 
-        if ($vista === 'dia') {
-            $inicio = Carbon::parse($fecha)->startOfDay();
-            $fin    = Carbon::parse($fecha)->endOfDay();
-        } elseif ($vista === 'mes') {
-            $inicio = Carbon::parse($fecha)->startOfMonth();
-            $fin    = Carbon::parse($fecha)->endOfMonth();
-        } else {
-            $inicio = Carbon::parse($fecha)->startOfWeek(Carbon::MONDAY);
-            $fin    = Carbon::parse($fecha)->endOfWeek(Carbon::SUNDAY);
-        }
+        $query = Clase::with(['tipoClase', 'instructor', 'reservasConfirmadas']);
 
-        $query = Clase::with(['tipoClase', 'instructor', 'reservasConfirmadas'])
-            ->whereBetween('fecha_hora_inicio', [$inicio, $fin]);
+        // CAMBIO: si vista es 'todas' no aplica filtro de fecha
+        if ($vista !== 'todas') {
+            if ($vista === 'dia') {
+                $inicio = Carbon::parse($fecha)->startOfDay();
+                $fin    = Carbon::parse($fecha)->endOfDay();
+            } elseif ($vista === 'mes') {
+                $inicio = Carbon::parse($fecha)->startOfMonth();
+                $fin    = Carbon::parse($fecha)->endOfMonth();
+            } else {
+                // semana por defecto
+                $inicio = Carbon::parse($fecha)->startOfWeek(Carbon::MONDAY);
+                $fin    = Carbon::parse($fecha)->endOfWeek(Carbon::SUNDAY);
+            }
+            $query->whereBetween('fecha_hora_inicio', [$inicio, $fin]);
+        }
 
         if ($tipo_clase_id) {
             $query->where('tipo_clase_id', $tipo_clase_id);
@@ -40,10 +44,9 @@ class ClaseController extends Controller
             $query->where('instructor_id', $instructor_id);
         }
 
-        $clases = $query->orderBy('fecha_hora_inicio')->get();
+        $clases = $query->orderBy('fecha_hora_inicio', 'desc')->get();
 
         $tiposClase   = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'color']);
-        // Solo traemos id y name — sin with('instructor') para evitar el error
         $instructores = User::role('instructor')->orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/Clases/Index', [
@@ -79,7 +82,6 @@ class ClaseController extends Controller
             'capacidad_maxima.min'       => 'La capacidad debe ser al menos 1',
         ]);
 
-        // Verificar solapamiento en la misma sala
         if (!empty($validated['sala'])) {
             $solapamiento = Clase::where('sala', $validated['sala'])
                 ->where('estado', '!=', 'cancelada')
@@ -97,16 +99,27 @@ class ClaseController extends Controller
             }
         }
 
-        $validated['horario_clase_id'] = null;
-        $validated['estado']           = $validated['estado'] ?? 'programada';
-
-        Clase::create($validated);
+        Clase::create([
+            'horario_clase_id'  => null,
+            'tipo_clase_id'     => $validated['tipo_clase_id'],
+            'instructor_id'     => $validated['instructor_id'],
+            'fecha_hora_inicio' => $validated['fecha_hora_inicio'],
+            'fecha_hora_fin'    => $validated['fecha_hora_fin'],
+            'capacidad_maxima'  => $validated['capacidad_maxima'],
+            'sala'              => $validated['sala'] ?? null,
+            'estado'            => $validated['estado'] ?? 'programada',
+        ]);
 
         return redirect()->back()->with('success', '¡Clase creada exitosamente!');
     }
 
     public function update(Request $request, Clase $clase)
     {
+        // Clases finalizadas no se pueden editar
+        if ($clase->estado === 'finalizada') {
+            return back()->withErrors(['estado' => 'Las clases finalizadas no se pueden editar.']);
+        }
+
         $validated = $request->validate([
             'tipo_clase_id'     => 'required|exists:tipos_clase,id',
             'instructor_id'     => 'required|exists:users,id',
@@ -117,7 +130,6 @@ class ClaseController extends Controller
             'estado'            => 'nullable|in:programada,en_curso,finalizada,cancelada',
         ]);
 
-        // No reducir capacidad por debajo de reservas actuales
         $totalReservas = $clase->reservasConfirmadas()->count();
         if ($validated['capacidad_maxima'] < $totalReservas) {
             return back()->withErrors([
@@ -125,18 +137,25 @@ class ClaseController extends Controller
             ]);
         }
 
-        $clase->update($validated);
+        $clase->update([
+            'tipo_clase_id'     => $validated['tipo_clase_id'],
+            'instructor_id'     => $validated['instructor_id'],
+            'fecha_hora_inicio' => $validated['fecha_hora_inicio'],
+            'fecha_hora_fin'    => $validated['fecha_hora_fin'],
+            'capacidad_maxima'  => $validated['capacidad_maxima'],
+            'sala'              => $validated['sala'] ?? null,
+            'estado'            => $validated['estado'] ?? $clase->estado,
+        ]);
 
         return redirect()->back()->with('success', '¡Clase actualizada exitosamente!');
     }
 
     public function destroy(Clase $clase)
     {
-        // Cancelar todas las reservas asociadas
         if ($clase->reservasConfirmadas()->count() > 0) {
             $clase->reservas()->update([
-                'estado'             => 'cancelada',
-                'fecha_cancelacion'  => now(),
+                'estado'            => 'cancelada',
+                'fecha_cancelacion' => now(),
             ]);
         }
 

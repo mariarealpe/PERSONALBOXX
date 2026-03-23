@@ -1,12 +1,8 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
+import { Transition } from '@headlessui/react';
 import { useRef } from 'react';
 
-export default function UpdatePasswordForm({ className = '' }) {
+export default function UpdatePasswordForm() {
     const passwordInput = useRef();
     const currentPasswordInput = useRef();
 
@@ -35,7 +31,6 @@ export default function UpdatePasswordForm({ className = '' }) {
                     reset('password', 'password_confirmation');
                     passwordInput.current.focus();
                 }
-
                 if (errors.current_password) {
                     reset('current_password');
                     currentPasswordInput.current.focus();
@@ -45,98 +40,179 @@ export default function UpdatePasswordForm({ className = '' }) {
     };
 
     return (
-        <section className={className}>
-            <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Update Password
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-600">
-                    Ensure your account is using a long, random password to stay
-                    secure.
-                </p>
-            </header>
-
-            <form onSubmit={updatePassword} className="mt-6 space-y-6">
+        <section className="profile-card">
+            <div className="card-header">
+                <span className="card-icon">🔒</span>
                 <div>
-                    <InputLabel
-                        htmlFor="current_password"
-                        value="Current Password"
-                    />
+                    <h2 className="card-title">Cambiar Contraseña</h2>
+                    <p className="card-desc">Usa una contraseña larga y aleatoria para mayor seguridad</p>
+                </div>
+            </div>
 
-                    <TextInput
-                        id="current_password"
+            <form onSubmit={updatePassword} className="card-form">
+                <div className="form-group">
+                    <label className="label">Contraseña actual</label>
+                    <input
+                        type="password"
                         ref={currentPasswordInput}
                         value={data.current_password}
-                        onChange={(e) =>
-                            setData('current_password', e.target.value)
-                        }
-                        type="password"
-                        className="mt-1 block w-full"
+                        onChange={(e) => setData('current_password', e.target.value)}
+                        className={`input ${errors.current_password ? 'input-error' : ''}`}
                         autoComplete="current-password"
                     />
-
-                    <InputError
-                        message={errors.current_password}
-                        className="mt-2"
-                    />
+                    {errors.current_password && <p className="error-msg">{errors.current_password}</p>}
                 </div>
 
-                <div>
-                    <InputLabel htmlFor="password" value="New Password" />
-
-                    <TextInput
-                        id="password"
+                <div className="form-group">
+                    <label className="label">Nueva contraseña</label>
+                    <input
+                        type="password"
                         ref={passwordInput}
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
-                        type="password"
-                        className="mt-1 block w-full"
+                        className={`input ${errors.password ? 'input-error' : ''}`}
                         autoComplete="new-password"
                     />
-
-                    <InputError message={errors.password} className="mt-2" />
+                    {errors.password && <p className="error-msg">{errors.password}</p>}
                 </div>
 
-                <div>
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
-                    <TextInput
-                        id="password_confirmation"
+                <div className="form-group">
+                    <label className="label">Confirmar nueva contraseña</label>
+                    <input
+                        type="password"
                         value={data.password_confirmation}
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        type="password"
-                        className="mt-1 block w-full"
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                        className={`input ${errors.password_confirmation ? 'input-error' : ''}`}
                         autoComplete="new-password"
                     />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
+                    {errors.password_confirmation && <p className="error-msg">{errors.password_confirmation}</p>}
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                <div className="card-footer">
+                    <button type="submit" disabled={processing} className="btn-save">
+                        {processing ? 'Actualizando...' : 'Actualizar Contraseña'}
+                    </button>
 
                     <Transition
                         show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
+                        enter="transition ease-in-out duration-300"
+                        enterFrom="opacity-0 translate-y-1"
+                        enterTo="opacity-100 translate-y-0"
+                        leave="transition ease-in-out duration-300"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-gray-600">
-                            Saved.
-                        </p>
+                        <span className="saved-badge">✓ Contraseña actualizada</span>
                     </Transition>
                 </div>
             </form>
+
+            <style jsx>{`
+                .profile-card {
+                    background: rgba(10, 10, 10, 0.95);
+                    border: 2px solid rgba(255, 20, 147, 0.25);
+                    border-radius: 14px;
+                    overflow: hidden;
+                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.06);
+                    transition: border-color 0.3s;
+                }
+
+                .profile-card:hover {
+                    border-color: rgba(255, 20, 147, 0.45);
+                }
+
+                .card-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 1.5rem;
+                    border-bottom: 1px solid rgba(255, 20, 147, 0.15);
+                    background: rgba(255, 20, 147, 0.04);
+                }
+
+                .card-icon { font-size: 1.75rem; flex-shrink: 0; }
+
+                .card-title {
+                    color: #FF1493;
+                    font-size: 1.1rem;
+                    font-weight: 900;
+                    margin: 0 0 0.2rem 0;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                }
+
+                .card-desc { color: #666; font-size: 0.8rem; margin: 0; }
+
+                .card-form {
+                    padding: 1.75rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.25rem;
+                }
+
+                .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+                .label {
+                    color: #FF1493;
+                    font-size: 0.7rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1.5px;
+                }
+
+                .input {
+                    width: 100%;
+                    padding: 0.875rem 1rem;
+                    background: #000;
+                    border: 2px solid rgba(255, 20, 147, 0.25);
+                    border-radius: 8px;
+                    color: #fff;
+                    font-size: 0.9rem;
+                    transition: all 0.3s;
+                    box-sizing: border-box;
+                }
+
+                .input:focus {
+                    outline: none;
+                    border-color: #FF1493;
+                    box-shadow: 0 0 12px rgba(255, 20, 147, 0.25);
+                }
+
+                .input-error { border-color: #ef4444 !important; }
+                .error-msg { color: #ef4444; font-size: 0.75rem; margin: 0; }
+
+                .card-footer {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding-top: 0.5rem;
+                }
+
+                .btn-save {
+                    background: linear-gradient(135deg, #FF1493, #C71585);
+                    color: #000;
+                    border: none;
+                    padding: 0.75rem 1.75rem;
+                    border-radius: 8px;
+                    font-weight: 900;
+                    font-size: 0.875rem;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.35);
+                }
+
+                .btn-save:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.55);
+                }
+
+                .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                .saved-badge {
+                    color: #22c55e;
+                    font-size: 0.875rem;
+                    font-weight: 700;
+                }
+            `}</style>
         </section>
     );
 }

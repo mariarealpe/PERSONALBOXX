@@ -31,7 +31,17 @@ class ClienteController extends Controller
             })
             ->orderBy('name')
             ->paginate(15)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function ($cliente) {
+                // Mapear el plan activo explícitamente para el frontend
+                $planActivo = $cliente->clientePlanes->first();
+                $cliente->plan_activo = $planActivo ? [
+                    'nombre'            => $planActivo->plan->nombre ?? null,
+                    'fecha_vencimiento' => $planActivo->fecha_vencimiento,
+                    'estado'            => $planActivo->estado,
+                ] : null;
+                return $cliente;
+            });
 
         $planes = Plan::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'tipo', 'precio']);
 
@@ -100,22 +110,25 @@ class ClienteController extends Controller
     public function asignarPlan(Request $request, User $user)
     {
         $validated = $request->validate([
-            'plan_id'       => 'required|exists:planes,id',
-            'fecha_inicio'  => 'required|date',
+            'plan_id'           => 'required|exists:planes,id',
+            'fecha_inicio'      => 'required|date',
+            'fecha_vencimiento' => 'required|date|after:fecha_inicio',
         ], [
-            'plan_id.required'      => 'Debes seleccionar un plan',
-            'fecha_inicio.required' => 'La fecha de inicio es obligatoria',
+            'plan_id.required'           => 'Debes seleccionar un plan',
+            'fecha_inicio.required'      => 'La fecha de inicio es obligatoria',
+            'fecha_vencimiento.required' => 'La fecha de vencimiento es obligatoria',
+            'fecha_vencimiento.after'    => 'La fecha de vencimiento debe ser posterior a la de inicio',
         ]);
 
         // Vencer plan actual si existe
         $user->clientePlanes()->where('estado', 'activo')->update(['estado' => 'vencido']);
 
         ClientePlan::create([
-            'cliente_id'        => $user->id,
-            'plan_id'           => $validated['plan_id'],
-            'fecha_inicio'      => $validated['fecha_inicio'],
-            'fecha_vencimiento' => \Carbon\Carbon::parse($validated['fecha_inicio'])->addDays(30)->format('Y-m-d'),
-            'estado'            => 'activo',
+            'cliente_id'           => $user->id,
+            'plan_id'              => $validated['plan_id'],
+            'fecha_inicio'         => $validated['fecha_inicio'],
+            'fecha_vencimiento'    => $validated['fecha_vencimiento'],
+            'estado'               => 'activo',
             'clases_usadas_semana' => 0,
         ]);
 

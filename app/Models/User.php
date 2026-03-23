@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -17,6 +18,7 @@ class User extends Authenticatable
         'password',
         'otp_code',
         'otp_expires_at',
+        'foto',
     ];
 
     protected $hidden = [
@@ -25,6 +27,8 @@ class User extends Authenticatable
         'otp_code',
     ];
 
+    protected $appends = ['foto_url'];
+
     protected function casts(): array
     {
         return [
@@ -32,6 +36,18 @@ class User extends Authenticatable
             'password'          => 'hashed',
             'otp_expires_at'    => 'datetime',
         ];
+    }
+
+    /**
+     * URL pública de la foto de perfil del usuario.
+     * Retorna null si no tiene foto asignada.
+     */
+    public function getFotoUrlAttribute(): ?string
+    {
+        if ($this->foto) {
+            return Storage::disk('public')->url($this->foto);
+        }
+        return null;
     }
 
     /**

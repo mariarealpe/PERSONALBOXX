@@ -86,20 +86,31 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
 
                 {/* Filtros */}
                 <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    <div style={{ flex: 1, minWidth: 160 }}>
+
+                    {/* CAMBIO 1: fecha se desactiva cuando vista === 'todas' */}
+                    <div style={{ flex: 1, minWidth: 160, opacity: vista === 'todas' ? 0.4 : 1 }}>
                         <label style={{ display: 'block', color: '#FF1493', fontSize: '0.7rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Fecha</label>
-                        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-                               style={{ width: '100%', padding: '0.75rem', background: '#000', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', fontSize: '0.875rem' }} />
+                        <input
+                            type="date"
+                            value={fecha}
+                            onChange={e => setFecha(e.target.value)}
+                            disabled={vista === 'todas'}
+                            style={{ width: '100%', padding: '0.75rem', background: '#000', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', fontSize: '0.875rem' }}
+                        />
                     </div>
+
                     <div style={{ flex: 1, minWidth: 140 }}>
                         <label style={{ display: 'block', color: '#FF1493', fontSize: '0.7rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Vista</label>
+                        {/* CAMBIO 2: agregada opción "Todas" */}
                         <select value={vista} onChange={e => setVista(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem', background: '#000', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', fontSize: '0.875rem' }}>
                             <option value="dia">Día</option>
                             <option value="semana">Semana</option>
                             <option value="mes">Mes</option>
+                            <option value="todas">Todas</option>
                         </select>
                     </div>
+
                     <button onClick={handleFiltrar} style={{ background: 'rgba(255,20,147,0.1)', border: '2px solid #FF1493', color: '#FF1493', padding: '0.75rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-end' }}>
                         🔍 Filtrar
                     </button>
@@ -137,13 +148,16 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
                                 </td>
                                 <td style={{ padding: '1rem', color: '#ccc' }}>{clase.sala || '-'}</td>
                                 <td style={{ padding: '1rem' }}>
-                                        <span style={{ background: `${estadoColor[clase.estado]}22`, color: estadoColor[clase.estado], border: `1px solid ${estadoColor[clase.estado]}`, padding: '0.375rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700 }}>
-                                            {estadoLabel[clase.estado]}
-                                        </span>
+                                    <span style={{ background: `${estadoColor[clase.estado]}22`, color: estadoColor[clase.estado], border: `1px solid ${estadoColor[clase.estado]}`, padding: '0.375rem 0.75rem', borderRadius: 6, fontSize: '0.75rem', fontWeight: 700 }}>
+                                        {estadoLabel[clase.estado]}
+                                    </span>
                                 </td>
                                 <td style={{ padding: '1rem' }}>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button onClick={() => openEditModal(clase)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid #3b82f6', padding: '0.5rem 0.75rem', borderRadius: 6, cursor: 'pointer', fontSize: '1rem' }} title="Editar">✏️</button>
+                                        {/* CAMBIO 3: botón editar oculto si clase está finalizada */}
+                                        {clase.estado !== 'finalizada' && (
+                                            <button onClick={() => openEditModal(clase)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid #3b82f6', padding: '0.5rem 0.75rem', borderRadius: 6, cursor: 'pointer', fontSize: '1rem' }} title="Editar">✏️</button>
+                                        )}
                                         <button onClick={() => handleDelete(clase)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', padding: '0.5rem 0.75rem', borderRadius: 6, cursor: 'pointer', fontSize: '1rem' }} title="Eliminar">🗑️</button>
                                     </div>
                                 </td>
@@ -153,7 +167,7 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
                     </table>
                 </div>
 
-                {/* Modal */}
+                {/* Modal — sin cambios */}
                 {showModal && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={closeModal}>
                         <div style={{ background: 'rgba(10,10,10,0.98)', border: '2px solid #FF1493', borderRadius: 12, width: '100%', maxWidth: 600, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 0 40px rgba(255,20,147,0.5)' }} onClick={e => e.stopPropagation()}>
