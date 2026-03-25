@@ -8,7 +8,8 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
     const hora     = (dt) => dt ? new Date(dt).toLocaleTimeString('es-CO',  { hour: '2-digit', minute: '2-digit' }) : '';
     const fmtFecha = (dt) => dt ? new Date(dt).toLocaleDateString('es-CO',  { weekday: 'short', day: 'numeric', month: 'short' }) : '';
 
-    const dias = stats.plan_actual?.dias_restantes ?? 0;
+    // Redondear días para evitar decimales como "29.144..."
+    const dias = Math.floor(stats.plan_actual?.dias_restantes ?? 0);
     const colorPlan = dias <= 5 ? '#ef4444' : dias <= 10 ? '#eab308' : '#22c55e';
 
     return (
@@ -96,13 +97,16 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
                     <h2 style={{ color: C, fontSize: '1.3rem', fontWeight: 900, margin: '0 0 1.5rem', textTransform: 'uppercase', letterSpacing: 2 }}>Acciones Rápidas</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
                         {[
-                            { icon: '🏋️', label: 'Reservar Clase',  href: '/cliente/clases'   },
-                            { icon: '📋', label: 'Mis Reservas',    href: '/cliente/reservas' },
-                            { icon: '📈', label: 'Mi Historial',    href: '/cliente/historial'},
-                            { icon: '💳', label: 'Mi Plan',         href: '/cliente/mi-plan'  },
+                            { icon: '🏋️', label: 'Reservar Clase', href: '/cliente/clases'    },
+                            { icon: '📋', label: 'Mis Reservas',   href: '/cliente/reservas'  },
+                            { icon: '📈', label: 'Mi Historial',   href: '/cliente/historial' },
+                            { icon: '💳', label: 'Mi Plan',        href: '/cliente/mi-plan'   },
                         ].map(a => (
                             <Link key={a.label} href={a.href} style={{ textDecoration: 'none' }}>
-                                <div style={{ background: 'rgba(255,20,147,0.1)', border: `2px solid ${C}`, color: C, padding: '1.5rem 1rem', borderRadius: 12, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center', fontSize: '0.9rem', cursor: 'pointer' }}>
+                                <div style={{ background: 'rgba(255,20,147,0.1)', border: `2px solid ${C}`, color: C, padding: '1.5rem 1rem', borderRadius: 12, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.3s' }}
+                                     onMouseOver={e => e.currentTarget.style.background = 'rgba(255,20,147,0.2)'}
+                                     onMouseOut={e => e.currentTarget.style.background = 'rgba(255,20,147,0.1)'}
+                                >
                                     <span style={{ fontSize: '1.75rem' }}>{a.icon}</span>
                                     <span>{a.label}</span>
                                 </div>

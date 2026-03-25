@@ -16,18 +16,35 @@ class ProfileController extends Controller
 {
     public function edit(Request $request): Response
     {
+        // Cargar roles para que el frontend use el layout correcto según rol
+        $user = $request->user()->load('roles');
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status'          => session('status'),
+            'auth'            => [
+                'user' => array_merge(
+                    $user->only(['id', 'name', 'email']),
+                    [
+                        'foto_url' => $user->foto_url,
+                        'roles'    => $user->roles->map(fn($r) => ['name' => $r->name])->values()->toArray(),
+                    ]
+                ),
+            ],
         ]);
     }
 
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        $request->validate([
+            'name'  => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $request->user()->id,
+            'foto'  => 'nullable|image|mimes:jpeg,png,webp|max:2048',
+        ]);
 
-        // Actualizar nombre y email
-        $user->fill($request->validated());
+        $user = $request->user();
+        $user->name  = $request->name;
+        $user->email = $request->email;
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -35,12 +52,9 @@ class ProfileController extends Controller
 
         // ── Foto de perfil ──────────────────────────────────────────────
         if ($request->hasFile('foto')) {
-            // Eliminar foto anterior si existe
             if ($user->foto && Storage::disk('public')->exists($user->foto)) {
                 Storage::disk('public')->delete($user->foto);
             }
-
-            // Guardar nueva foto en storage/app/public/fotos_perfil/
             $path = $request->file('foto')->store('fotos_perfil', 'public');
             $user->foto = $path;
         }
@@ -59,7 +73,6 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Eliminar foto si existe
         if ($user->foto && Storage::disk('public')->exists($user->foto)) {
             Storage::disk('public')->delete($user->foto);
         }

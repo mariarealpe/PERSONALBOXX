@@ -6,16 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Asistencia;
 use App\Models\Clase;
 use App\Models\Instructor;
+use App\Models\Liquidacion;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class InstructorController extends Controller
 {
-    // ── Helper: obtiene el perfil instructor del usuario autenticado ───────────
     private function getInstructor(Request $request): Instructor
     {
         return Instructor::where('user_id', $request->user()->id)->firstOrFail();
+    }
+
+    private function userData($user): array
+    {
+        return $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url];
     }
 
     // ── DASHBOARD ─────────────────────────────────────────────────────────────
@@ -53,7 +58,7 @@ class InstructorController extends Controller
         })->count();
 
         return Inertia::render('Instructor/Dashboard', [
-            'user'      => $user->only(['id', 'name', 'email']),
+            'user'      => $this->userData($user),
             'clasesHoy' => $clasesHoy,
             'stats'     => [
                 'clases_hoy'      => $clasesHoy->count(),
@@ -83,13 +88,13 @@ class InstructorController extends Controller
             });
 
         return Inertia::render('Instructor/Clases', [
-            'user'    => $request->user()->only(['id', 'name', 'email']),
+            'user'    => $this->userData($user),
             'clases'  => $clases,
             'filters' => $request->only(['fecha', 'estado']),
         ]);
     }
 
-    // ── ASISTENCIAS (vista) ───────────────────────────────────────────────────
+    // ── ASISTENCIAS ───────────────────────────────────────────────────────────
     public function asistencias(Request $request)
     {
         $user  = $request->user();
@@ -125,7 +130,7 @@ class InstructorController extends Controller
         }
 
         return Inertia::render('Instructor/Asistencias', [
-            'user'              => $user->only(['id', 'name', 'email']),
+            'user'              => $this->userData($user),
             'clases'            => $clases,
             'claseSeleccionada' => $claseSeleccionada,
             'asistencias'       => $asistencias,
@@ -134,7 +139,7 @@ class InstructorController extends Controller
         ]);
     }
 
-    // ── REGISTRAR ASISTENCIA (POST) ───────────────────────────────────────────
+    // ── REGISTRAR ASISTENCIA ──────────────────────────────────────────────────
     public function registrarAsistencia(Request $request)
     {
         $request->validate([
@@ -170,12 +175,11 @@ class InstructorController extends Controller
         return back()->with('success', 'Asistencia registrada correctamente.');
     }
 
-    // ── ELIMINAR ASISTENCIA (DELETE) ──────────────────────────────────────────
+    // ── ELIMINAR ASISTENCIA ───────────────────────────────────────────────────
     public function eliminarAsistencia(Request $request, Asistencia $asistencia)
     {
         $user = $request->user();
 
-        // Verificar que la clase pertenece al instructor
         Clase::where('id', $asistencia->clase_id)
             ->where('instructor_id', $user->id)
             ->firstOrFail();
@@ -194,15 +198,12 @@ class InstructorController extends Controller
         $clases       = collect();
         $totales      = null;
         $periodoLabel = '';
+        $pagoRegistrado = null; // ← pago ya registrado para este período
 
         if ($request->hasAny(['fecha_inicio', 'fecha_fin'])) {
             $request->validate([
                 'fecha_inicio' => 'required|date',
                 'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
-            ], [
-                'fecha_inicio.required'    => 'La fecha de inicio es requerida.',
-                'fecha_fin.required'       => 'La fecha fin es requerida.',
-                'fecha_fin.after_or_equal' => 'La fecha fin debe ser igual o posterior a la fecha de inicio.',
             ]);
 
             $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay();
@@ -216,8 +217,8 @@ class InstructorController extends Controller
                 ->orderBy('fecha_hora_inicio')
                 ->get()
                 ->map(function ($clase) use ($instructor) {
-                    $asistentes      = $clase->asistencias_count;
-                    $clase->pago     = $instructor->tarifa_por_asistente > 0
+                    $asistentes              = $clase->asistencias_count;
+                    $clase->pago             = $instructor->tarifa_por_asistente > 0
                         ? $instructor->tarifa_por_asistente * $asistentes
                         : $instructor->tarifa_por_clase;
                     $clase->total_asistentes = $asistentes;
@@ -233,27 +234,33 @@ class InstructorController extends Controller
             $periodoLabel = Carbon::parse($request->fecha_inicio)->format('d/m/Y')
                 . ' – '
                 . Carbon::parse($request->fecha_fin)->format('d/m/Y');
+
+            // ── Buscar si ya existe un pago registrado que cubra este período ──
+            $pagoRegistrado = Liquidacion::where('instructor_id', $instructor->id)
+                ->whereDate('fecha_inicio', '<=', $fechaFin->toDateString())
+                ->whereDate('fecha_fin',    '>=', $fechaInicio->toDateString())
+                ->orderByDesc('fecha_pago')
+                ->first();
+
+            if ($pagoRegistrado) {
+                $pagoRegistrado = [
+                    'total_pago'   => $pagoRegistrado->total_pago,
+                    'fecha_pago'   => $pagoRegistrado->fecha_pago->format('d/m/Y'),
+                    'fecha_inicio' => $pagoRegistrado->fecha_inicio->format('d/m/Y'),
+                    'fecha_fin'    => $pagoRegistrado->fecha_fin->format('d/m/Y'),
+                    'notas'        => $pagoRegistrado->notas,
+                ];
+            }
         }
 
         return Inertia::render('Instructor/Liquidacion', [
-            'user'         => $user->only(['id', 'name', 'email']),
-            'instructor'   => $instructor->only(['tarifa_por_clase', 'tarifa_por_asistente']),
-            'clases'       => $clases,
-            'totales'      => $totales,
-            'filters'      => $request->only(['fecha_inicio', 'fecha_fin']),
-            'periodoLabel' => $periodoLabel,
+            'user'           => $this->userData($user),
+            'instructor'     => $instructor->only(['tarifa_por_clase', 'tarifa_por_asistente']),
+            'clases'         => $clases,
+            'totales'        => $totales,
+            'filters'        => $request->only(['fecha_inicio', 'fecha_fin']),
+            'periodoLabel'   => $periodoLabel,
+            'pagoRegistrado' => $pagoRegistrado, // ← nuevo prop
         ]);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

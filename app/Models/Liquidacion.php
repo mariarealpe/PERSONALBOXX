@@ -1,5 +1,4 @@
 <?php
-// Ruta: app/Models/Liquidacion.php
 
 namespace App\Models;
 
@@ -24,16 +23,16 @@ class Liquidacion extends Model
     ];
 
     protected $casts = [
-        'fecha_inicio' => 'date',
-        'fecha_fin'    => 'date',
-        'fecha_pago'   => 'date',
-        'total_pago'   => 'float',
-        'tarifa_aplicada' => 'float',
+        'fecha_inicio'    => 'date',
+        'fecha_fin'       => 'date',
+        'fecha_pago'      => 'date',
+        'tarifa_aplicada' => 'decimal:2',
+        'total_pago'      => 'decimal:2',
     ];
 
     public function instructor()
     {
-        return $this->belongsTo(Instructor::class);
+        return $this->belongsTo(Instructor::class, 'instructor_id');
     }
 
     public function aprobadoPor()

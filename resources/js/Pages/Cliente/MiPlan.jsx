@@ -20,7 +20,8 @@ export default function ClienteMiPlan({ user, planActivo, historialPlanes }) {
         cancelado:{ color: '#6b7280', bg: 'rgba(107,114,128,0.1)', label: 'Cancelado'},
     };
 
-    const dias = planActivo?.dias_restantes ?? 0;
+    // Math.floor para mostrar siempre número entero
+    const dias = Math.floor(planActivo?.dias_restantes ?? 0);
     const colorDias = dias <= 5 ? '#ef4444' : dias <= 10 ? '#eab308' : '#22c55e';
 
     return (
@@ -67,7 +68,9 @@ export default function ClienteMiPlan({ user, planActivo, historialPlanes }) {
                             </div>
                             <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '1rem' }}>
                                 <p style={{ color: '#666', fontSize: '0.7rem', margin: '0 0 0.3rem', textTransform: 'uppercase' }}>Días restantes</p>
-                                <p style={{ color: colorDias, fontWeight: 900, margin: 0, fontSize: '1.5rem' }}>{dias > 0 ? dias : 'Vencido'}</p>
+                                <p style={{ color: colorDias, fontWeight: 900, margin: 0, fontSize: '1.5rem' }}>
+                                    {dias > 0 ? dias : 'Vencido'}
+                                </p>
                             </div>
                         </div>
 

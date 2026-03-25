@@ -17,17 +17,18 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
-        'canLogin'      => Route::has('login'),
-        'canRegister'   => Route::has('register'),
+        'canLogin'       => Route::has('login'),
+        'canRegister'    => Route::has('register'),
         'laravelVersion' => Application::VERSION,
-        'phpVersion'    => PHP_VERSION,
+        'phpVersion'     => PHP_VERSION,
     ]);
 });
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update'); // POST para FormData con _method:PATCH
+    Route::patch('/profile', [ProfileController::class, 'update']);                        // PATCH normal como respaldo
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
@@ -75,63 +76,37 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::get('/reportes/liquidacion/historial',
         [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'index'])
         ->name('reportes.liquidacion.historial');
-
     Route::post('/reportes/liquidacion/historial',
         [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'store'])
         ->name('reportes.liquidacion.historial.store');
-
     Route::delete('/reportes/liquidacion/historial/{liquidacion}',
         [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'destroy'])
         ->name('reportes.liquidacion.historial.destroy');
 });
+
+// Rutas de Instructor
 Route::middleware(['auth', 'role:instructor'])
     ->prefix('instructor')
     ->name('instructor.')
     ->group(function () {
-
-        Route::get('/clases', [InstructorPortalController::class, 'clases'])
-            ->name('clases.index');
-
-        Route::get('/asistencias', [InstructorPortalController::class, 'asistencias'])
-            ->name('asistencias.index');
-
-        Route::post('/asistencias', [InstructorPortalController::class, 'registrarAsistencia'])
-            ->name('asistencias.registrar');
-
-        Route::delete('/asistencias/{asistencia}', [InstructorPortalController::class, 'eliminarAsistencia'])
-            ->name('asistencias.eliminar');
-
-        Route::get('/liquidacion', [InstructorPortalController::class, 'liquidacion'])
-            ->name('liquidacion.index');
+        Route::get('/clases', [InstructorPortalController::class, 'clases'])->name('clases.index');
+        Route::get('/asistencias', [InstructorPortalController::class, 'asistencias'])->name('asistencias.index');
+        Route::post('/asistencias', [InstructorPortalController::class, 'registrarAsistencia'])->name('asistencias.registrar');
+        Route::delete('/asistencias/{asistencia}', [InstructorPortalController::class, 'eliminarAsistencia'])->name('asistencias.eliminar');
+        Route::get('/liquidacion', [InstructorPortalController::class, 'liquidacion'])->name('liquidacion.index');
     });
+
+// Rutas de Cliente
 Route::middleware(['auth', 'role:cliente'])
     ->prefix('cliente')
     ->name('cliente.')
     ->group(function () {
-
-        Route::get('/clases',
-            [ClientePortalController::class, 'clases'])
-            ->name('clases.index');
-
-        Route::post('/clases/reservar',
-            [ClientePortalController::class, 'reservar'])
-            ->name('clases.reservar');
-
-        Route::get('/reservas',
-            [ClientePortalController::class, 'reservas'])
-            ->name('reservas.index');
-
-        Route::patch('/reservas/{reserva}/cancelar',
-            [ClientePortalController::class, 'cancelarReserva'])
-            ->name('reservas.cancelar');
-
-        Route::get('/historial',
-            [ClientePortalController::class, 'historial'])
-            ->name('historial.index');
-
-        Route::get('/mi-plan',
-            [ClientePortalController::class, 'miPlan'])
-            ->name('mi-plan.index');
+        Route::get('/clases', [ClientePortalController::class, 'clases'])->name('clases.index');
+        Route::post('/clases/reservar', [ClientePortalController::class, 'reservar'])->name('clases.reservar');
+        Route::get('/reservas', [ClientePortalController::class, 'reservas'])->name('reservas.index');
+        Route::patch('/reservas/{reserva}/cancelar', [ClientePortalController::class, 'cancelarReserva'])->name('reservas.cancelar');
+        Route::get('/historial', [ClientePortalController::class, 'historial'])->name('historial.index');
+        Route::get('/mi-plan', [ClientePortalController::class, 'miPlan'])->name('mi-plan.index');
     });
 
 Route::get('/2fa', function () {

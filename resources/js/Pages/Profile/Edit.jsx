@@ -1,11 +1,26 @@
 import DashboardLayout from '@/Layouts/DashboardLayout';
+import InstructorLayout from '@/Layouts/InstructorLayout';
+import ClienteLayout from '@/Layouts/ClienteLayout';
 import { Head } from '@inertiajs/react';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 
+function getLayout(user, children) {
+    const roles = user.roles?.map(r => r.name) ?? [];
+
+    if (roles.includes('instructor')) {
+        return <InstructorLayout user={user}>{children}</InstructorLayout>;
+    }
+    if (roles.includes('cliente')) {
+        return <ClienteLayout user={user}>{children}</ClienteLayout>;
+    }
+    // administrador o cualquier otro rol
+    return <DashboardLayout user={user}>{children}</DashboardLayout>;
+}
+
 export default function Edit({ auth, mustVerifyEmail, status }) {
-    return (
-        <DashboardLayout user={auth.user}>
+    const content = (
+        <>
             <Head title="Mi Perfil" />
 
             <div className="profile-container">
@@ -103,6 +118,8 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                 .profile-email { color: #555; font-size: 0.825rem; margin: 0; }
                 .sections-grid { display: flex; flex-direction: column; gap: 1.5rem; }
             `}</style>
-        </DashboardLayout>
+        </>
     );
+
+    return getLayout(auth.user, content);
 }

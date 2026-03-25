@@ -13,6 +13,11 @@ use Inertia\Inertia;
 
 class ClienteController extends Controller
 {
+    private function userData($user): array
+    {
+        return $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url];
+    }
+
     public function dashboard(Request $request)
     {
         $user = $request->user()->load('roles');
@@ -39,7 +44,7 @@ class ClienteController extends Controller
             ->take(5)->get();
 
         return Inertia::render('Cliente/Dashboard', [
-            'user'           => $user->only(['id','name','email']),
+            'user'           => $this->userData($user),
             'proximasClases' => $proximasClases,
             'stats'          => [
                 'reservas_activas' => $reservasActivas,
@@ -75,7 +80,7 @@ class ClienteController extends Controller
         $tiposClase = \App\Models\TipoClase::where('activo',true)->orderBy('nombre')->get(['id','nombre','color']);
 
         return Inertia::render('Cliente/Clases', [
-            'user'       => $user->only(['id','name','email']),
+            'user'       => $this->userData($user),
             'clases'     => $clases,
             'tiposClase' => $tiposClase,
             'filters'    => $request->only(['fecha','tipo_clase_id']),
@@ -118,7 +123,7 @@ class ClienteController extends Controller
             ->paginate(10)->withQueryString();
 
         return Inertia::render('Cliente/Reservas', [
-            'user'     => $user->only(['id','name','email']),
+            'user'     => $this->userData($user),
             'reservas' => $reservas,
             'filters'  => $request->only(['estado']),
         ]);
@@ -158,7 +163,7 @@ class ClienteController extends Controller
             ->orderByDesc('total')->get();
 
         return Inertia::render('Cliente/Historial', [
-            'user'         => $user->only(['id','name','email']),
+            'user'         => $this->userData($user),
             'historial'    => $historial,
             'tiposClase'   => $tiposClase,
             'totalPorTipo' => $totalPorTipo,
@@ -181,7 +186,7 @@ class ClienteController extends Controller
             ]));
 
         return Inertia::render('Cliente/MiPlan', [
-            'user'            => $user->only(['id','name','email']),
+            'user'            => $this->userData($user),
             'planActivo'      => $planActivo ? array_merge($planActivo->toArray(), [
                 'dias_restantes' => Carbon::now()->diffInDays($planActivo->fecha_vencimiento, false),
             ]) : null,
