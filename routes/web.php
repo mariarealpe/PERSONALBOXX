@@ -131,4 +131,6 @@ Route::middleware(['auth', 'role:cliente'])
         Route::get('/mi-plan', [ClientePortalController::class, 'miPlan'])->name('mi-plan.index');
     });
 
+
+
 require __DIR__.'/auth.php';
