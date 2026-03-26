@@ -2,7 +2,6 @@ import { Head } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 
-// ── Mini gráfica de barras ────────────────────────────────────────────────────
 function BarChart({ data, valueKey, labelKey, color = '#FF1493', height = 120 }) {
     const max = Math.max(...data.map(d => d[valueKey]), 1);
     return (
@@ -12,7 +11,7 @@ function BarChart({ data, valueKey, labelKey, color = '#FF1493', height = 120 })
                 return (
                     <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
                         <span style={{ color, fontSize: '0.7rem', fontWeight: 700 }}>{d[valueKey]}</span>
-                        <div title={`${d[labelKey]}: ${d[valueKey]}`} style={{ width: '100%', height: `${pct}%`, background: `linear-gradient(to top, ${color}, ${color}88)`, borderRadius: '3px 3px 0 0', border: `1px solid ${color}66`, transition: 'all 0.3s', minHeight: 3 }} />
+                        <div title={`${d[labelKey]}: ${d[valueKey]}`} style={{ width: '100%', height: `${pct}%`, background: color, borderRadius: '3px 3px 0 0', border: `1px solid ${color}66`, transition: 'all 0.3s', minHeight: 3 }} />
                         <span style={{ color: '#666', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', textAlign: 'center' }}>{d[labelKey]}</span>
                     </div>
                 );
@@ -21,7 +20,6 @@ function BarChart({ data, valueKey, labelKey, color = '#FF1493', height = 120 })
     );
 }
 
-// ── Tarjeta de stat ───────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub, color = '#FF1493' }) {
     return (
         <div style={{ background: 'rgba(10,10,10,0.95)', border: `2px solid ${color}44`, borderRadius: 12, padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: `0 0 20px ${color}15` }}>
@@ -35,17 +33,17 @@ function StatCard({ icon, label, value, sub, color = '#FF1493' }) {
     );
 }
 
-export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenciaPorMes, clasesPopulares, tiposPopulares, horariosDemanda, proximasClases }) {
+export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenciaPorMes, clasesPopulares, horariosDemanda, proximasClases, clientesMasActivos }) {
     const fmt  = (n) => new Intl.NumberFormat('es-CO').format(n ?? 0);
     const box  = (color = '#FF1493') => ({ background: 'rgba(10,10,10,0.95)', border: `2px solid ${color}44`, borderRadius: 12, padding: '1.5rem', boxShadow: `0 0 20px ${color}15` });
-    const pink = '#FF1493', blue = '#3b82f6', green = '#22c55e', amber = '#f59e0b';
+    const pink = '#FF1493', blue = '#3b82f6', green = '#22c55e', amber = '#f59e0b', purple = '#a855f7';
 
     const quickActions = [
-        { label: 'Clases', icon: '📅', href: route('admin.clases.index'), color: pink },
-        { label: 'Instructores', icon: '👨‍🏫', href: route('admin.instructores.index'), color: blue },
-        { label: 'Clientes', icon: '👥', href: route('admin.clientes.index'), color: green },
-        { label: 'Asistencia', icon: '✅', href: route('admin.asistencias.index'), color: amber },
-        { label: 'Reportes', icon: '📊', href: route('admin.reportes.index'), color: '#a855f7' },
+        { label: 'Clases',       icon: '📅', href: route('admin.clases.index'),       color: pink   },
+        { label: 'Instructores', icon: '👨‍🏫', href: route('admin.instructores.index'), color: blue   },
+        { label: 'Clientes',     icon: '👥', href: route('admin.clientes.index'),      color: green  },
+        { label: 'Asistencia',   icon: '✅', href: route('admin.asistencias.index'),   color: amber  },
+        { label: 'Reportes',     icon: '📊', href: route('admin.reportes.index'),      color: purple },
     ];
 
     return (
@@ -76,26 +74,22 @@ export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenc
 
                 {/* Stats principales */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                    <StatCard icon="👥" label="Total Clientes" value={fmt(stats.total_clientes)} color={pink} />
-                    <StatCard icon="👨‍🏫" label="Instructores" value={fmt(stats.total_instructores)} color={blue} />
-                    <StatCard icon="📅" label="Clases Hoy" value={fmt(stats.clases_hoy)} sub={`${fmt(stats.clases_semana)} esta semana`} color={pink} />
-                    <StatCard icon="✅" label="Asistencias Hoy" value={fmt(stats.asistencias_hoy)} sub={`${fmt(stats.asistencias_semana)} esta semana`} color={green} />
-                    <StatCard icon="📋" label="Reservas Hoy" value={fmt(stats.reservas_hoy)} color={amber} />
-                    <StatCard icon="🎯" label="Ocupación Mes" value={`${stats.tasa_ocupacion_mes}%`} sub="Tasa promedio" color={stats.tasa_ocupacion_mes >= 70 ? green : stats.tasa_ocupacion_mes >= 40 ? amber : '#ef4444'} />
-                    <StatCard icon="🏋️" label="Asistencias Mes" value={fmt(stats.asistencias_mes)} sub={`${fmt(stats.clases_mes)} clases`} color={pink} />
-                    <StatCard icon="🔥" label="Clientes Activos" value={fmt(stats.clientes_activos_mes)} sub="Este mes" color={blue} />
+                    <StatCard icon="👥" label="Total Clientes"    value={fmt(stats.total_clientes)}       color={pink} />
+                    <StatCard icon="👨‍🏫" label="Instructores"      value={fmt(stats.total_instructores)}   color={blue} />
+                    <StatCard icon="📅" label="Clases Hoy"         value={fmt(stats.clases_hoy)}           sub={`${fmt(stats.clases_semana)} esta semana`} color={pink} />
+                    <StatCard icon="✅" label="Asistencias Hoy"    value={fmt(stats.asistencias_hoy)}      sub={`${fmt(stats.asistencias_semana)} esta semana`} color={green} />
+                    <StatCard icon="📋" label="Reservas Hoy"       value={fmt(stats.reservas_hoy)}         color={amber} />
+                    <StatCard icon="🎯" label="Ocupación Mes"      value={`${stats.tasa_ocupacion_mes}%`}  sub="Tasa promedio" color={stats.tasa_ocupacion_mes >= 70 ? green : stats.tasa_ocupacion_mes >= 40 ? amber : '#ef4444'} />
+                    <StatCard icon="🏋️" label="Asistencias Mes"    value={fmt(stats.asistencias_mes)}      sub={`${fmt(stats.clases_mes)} clases`} color={pink} />
+                    <StatCard icon="🔥" label="Clientes Activos"   value={fmt(stats.clientes_activos_mes)} sub="Este mes" color={blue} />
                 </div>
 
-                {/* Fila: gráficas */}
+                {/* Gráficas */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-
-                    {/* Asistencia últimos 7 días */}
                     <div style={box(pink)}>
                         <h2 style={{ color: pink, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>📈 Asistencia — Últimos 7 Días</h2>
                         <BarChart data={asistenciaPorDia} valueKey="total" labelKey="dia" color={pink} height={130} />
                     </div>
-
-                    {/* Asistencia últimos 6 meses */}
                     <div style={box(blue)}>
                         <h2 style={{ color: blue, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>📊 Tendencia — Últimos 6 Meses</h2>
                         <BarChart data={asistenciaPorMes} valueKey="total" labelKey="mes" color={blue} height={130} />
@@ -104,7 +98,7 @@ export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenc
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
 
-                    {/* Clases más populares */}
+                    {/* Clases populares */}
                     <div style={box(green)}>
                         <h2 style={{ color: green, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>🏆 Clases Populares</h2>
                         {clasesPopulares?.length === 0 ? (
@@ -119,7 +113,7 @@ export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenc
                         ))}
                     </div>
 
-                    {/* Horarios de mayor demanda */}
+                    {/* Horarios de demanda */}
                     <div style={box(amber)}>
                         <h2 style={{ color: amber, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>⏰ Horarios Demanda</h2>
                         {horariosDemanda?.length === 0 ? (
@@ -129,7 +123,7 @@ export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenc
                         )}
                     </div>
 
-                    {/* Próximas clases hoy */}
+                    {/* Clases de hoy */}
                     <div style={box(pink)}>
                         <h2 style={{ color: pink, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>📅 Clases de Hoy</h2>
                         {proximasClases?.length === 0 ? (
@@ -147,6 +141,36 @@ export default function AdminDashboard({ user, stats, asistenciaPorDia, asistenc
                         ))}
                     </div>
                 </div>
+
+                {/* ── RF-15: Clientes más activos del mes ──────────────────── */}
+                <div style={box(purple)}>
+                    <h2 style={{ color: purple, fontWeight: 900, margin: '0 0 1rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 2 }}>🔥 Clientes Más Activos — Este Mes</h2>
+                    {!clientesMasActivos || clientesMasActivos.length === 0 ? (
+                        <p style={{ color: '#555', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>Sin asistencias registradas este mes</p>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                            {clientesMasActivos.map((c, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', padding: '0.875rem 1rem', background: '#0a0a0a', borderRadius: 10, border: `1px solid ${purple}33` }}>
+                                    {/* Posición con color especial para el top 1 */}
+                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: i === 0 ? `linear-gradient(135deg,${amber},#e6a800)` : `${purple}22`, border: `2px solid ${i === 0 ? amber : purple + '44'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <span style={{ color: i === 0 ? '#000' : purple, fontWeight: 900, fontSize: '0.85rem' }}>
+                                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                                        </span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ color: '#fff', fontWeight: 700, margin: '0 0 0.1rem', fontSize: '0.875rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</p>
+                                        <p style={{ color: '#555', margin: 0, fontSize: '0.72rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.email}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                        <p style={{ color: purple, fontWeight: 900, margin: '0 0 0.1rem', fontSize: '1.1rem' }}>{c.total_asistencias}</p>
+                                        <p style={{ color: '#555', margin: 0, fontSize: '0.65rem' }}>clases</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {/* ─────────────────────────────────────────────────────────── */}
 
             </div>
         </DashboardLayout>

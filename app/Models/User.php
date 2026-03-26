@@ -18,13 +18,20 @@ class User extends Authenticatable
         'password',
         'otp_code',
         'otp_expires_at',
+        'otp_intentos',       // RF-21: contador de intentos fallidos
         'foto',
+        // Flujo de activación de cuenta
+        'estado_cuenta',
+        'token_activacion',
+        'token_expiracion',
+        'creado_por',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
         'otp_code',
+        'token_activacion',
     ];
 
     protected $appends = ['foto_url'];
@@ -35,13 +42,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'otp_expires_at'    => 'datetime',
+            'token_expiracion'  => 'datetime',
+            'otp_intentos'      => 'integer',
         ];
     }
 
-    /**
-     * URL pública de la foto de perfil del usuario.
-     * Retorna null si no tiene foto asignada.
-     */
     public function getFotoUrlAttribute(): ?string
     {
         if ($this->foto) {
@@ -50,10 +55,6 @@ class User extends Authenticatable
         return null;
     }
 
-    /**
-     * Relación hacia el perfil del instructor (tabla instructores).
-     * Permite usar $user->instructor->tarifa_por_clase, etc.
-     */
     public function instructor()
     {
         return $this->hasOne(Instructor::class, 'user_id');
@@ -67,5 +68,10 @@ class User extends Authenticatable
     public function clientePlanes()
     {
         return $this->hasMany(ClientePlan::class, 'cliente_id');
+    }
+
+    public function creadoPor()
+    {
+        return $this->belongsTo(User::class, 'creado_por');
     }
 }

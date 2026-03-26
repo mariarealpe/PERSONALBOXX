@@ -9,12 +9,14 @@ use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\AsistenciaController;
 use App\Http\Controllers\Admin\ReporteController;
 use App\Http\Controllers\Auth\TwoFactorController;
+use App\Http\Controllers\Auth\ActivarCuentaController;
 use App\Http\Controllers\Instructor\InstructorController as InstructorPortalController;
 use App\Http\Controllers\Cliente\ClienteController as ClientePortalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Página de bienvenida
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin'       => Route::has('login'),
@@ -24,11 +26,30 @@ Route::get('/', function () {
     ]);
 });
 
+// Activación de cuenta (rutas públicas)
+Route::get('/activar-cuenta', [ActivarCuentaController::class, 'show'])
+    ->name('activar-cuenta.show');
+Route::post('/activar-cuenta', [ActivarCuentaController::class, 'completarRegistro'])
+    ->name('activar-cuenta.completar');
+Route::get('/activar-cuenta/verificar', [ActivarCuentaController::class, 'showVerificarOtp'])
+    ->name('activar-cuenta.verificar-otp');
+Route::post('/activar-cuenta/verificar', [ActivarCuentaController::class, 'verificarOtp'])
+    ->name('activar-cuenta.verificar-otp.post');
+
+// 2FA
+Route::get('/2fa', function () {
+    return Inertia::render('Auth/TwoFactor');
+})->name('2fa.form');
+
+Route::post('/2fa', [TwoFactorController::class, 'verify'])->name('2fa.verify');
+
+// Rutas autenticadas comunes
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update'); // POST para FormData con _method:PATCH
-    Route::patch('/profile', [ProfileController::class, 'update']);                        // PATCH normal como respaldo
+    Route::patch('/profile', [ProfileController::class, 'update']); // PATCH normal como respaldo
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
@@ -52,6 +73,7 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     // Clases
     Route::get('/clases', [ClaseController::class, 'index'])->name('clases.index');
     Route::post('/clases', [ClaseController::class, 'store'])->name('clases.store');
+    Route::get('/clases/{clase}', [ClaseController::class, 'show'])->name('clases.show');
     Route::put('/clases/{clase}', [ClaseController::class, 'update'])->name('clases.update');
     Route::delete('/clases/{clase}', [ClaseController::class, 'destroy'])->name('clases.destroy');
     Route::patch('/clases/{clase}/estado', [ClaseController::class, 'toggleEstado'])->name('clases.estado');
@@ -63,6 +85,8 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::delete('/clientes/{user}', [ClienteController::class, 'destroy'])->name('clientes.destroy');
     Route::get('/clientes/{user}', [ClienteController::class, 'show'])->name('clientes.show');
     Route::post('/clientes/{user}/plan', [ClienteController::class, 'asignarPlan'])->name('clientes.plan');
+    Route::post('/clientes/{user}/reenviar-activacion', [ClienteController::class, 'reenviarActivacion'])->name('clientes.reenviar-activacion');
+    Route::patch('/clientes/{user}/toggle-activo', [ClienteController::class, 'toggleActivo'])->name('clientes.toggle-activo');
 
     // Asistencias
     Route::get('/asistencias', [AsistenciaController::class, 'index'])->name('asistencias.index');
@@ -73,14 +97,12 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
     Route::get('/reportes/asistencia-clase', [ReporteController::class, 'asistenciaClase'])->name('reportes.asistencia-clase');
     Route::get('/reportes/liquidacion', [ReporteController::class, 'liquidacionInstructor'])->name('reportes.liquidacion');
-    Route::get('/reportes/liquidacion/historial',
-        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'index'])
+
+    Route::get('/reportes/liquidacion/historial', [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'index'])
         ->name('reportes.liquidacion.historial');
-    Route::post('/reportes/liquidacion/historial',
-        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'store'])
+    Route::post('/reportes/liquidacion/historial', [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'store'])
         ->name('reportes.liquidacion.historial.store');
-    Route::delete('/reportes/liquidacion/historial/{liquidacion}',
-        [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'destroy'])
+    Route::delete('/reportes/liquidacion/historial/{liquidacion}', [App\Http\Controllers\Admin\LiquidacionHistorialController::class, 'destroy'])
         ->name('reportes.liquidacion.historial.destroy');
 });
 
@@ -108,11 +130,5 @@ Route::middleware(['auth', 'role:cliente'])
         Route::get('/historial', [ClientePortalController::class, 'historial'])->name('historial.index');
         Route::get('/mi-plan', [ClientePortalController::class, 'miPlan'])->name('mi-plan.index');
     });
-
-Route::get('/2fa', function () {
-    return Inertia::render('Auth/TwoFactor');
-})->name('2fa.form');
-
-Route::post('/2fa', [TwoFactorController::class, 'verify'])->name('2fa.verify');
 
 require __DIR__.'/auth.php';

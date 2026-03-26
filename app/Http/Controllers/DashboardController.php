@@ -33,15 +33,15 @@ class DashboardController extends Controller
         $stats = [
             'total_clientes'       => \App\Models\User::role('cliente')->count(),
             'total_instructores'   => \App\Models\User::role('instructor')->count(),
-            'clases_hoy'           => \App\Models\Clase::whereDate('fecha_hora_inicio', $hoy)->where('estado','!=','cancelada')->count(),
-            'clases_semana'        => \App\Models\Clase::whereBetween('fecha_hora_inicio',[$inicioSemana,$finSemana])->where('estado','!=','cancelada')->count(),
-            'clases_mes'           => \App\Models\Clase::whereBetween('fecha_hora_inicio',[$inicioMes,$finMes])->where('estado','!=','cancelada')->count(),
+            'clases_hoy'           => \App\Models\Clase::whereDate('fecha_hora_inicio', $hoy)->where('estado', '!=', 'cancelada')->count(),
+            'clases_semana'        => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioSemana, $finSemana])->where('estado', '!=', 'cancelada')->count(),
+            'clases_mes'           => \App\Models\Clase::whereBetween('fecha_hora_inicio', [$inicioMes, $finMes])->where('estado', '!=', 'cancelada')->count(),
             'asistencias_hoy'      => \App\Models\Asistencia::whereDate('hora_registro', $hoy)->count(),
-            'asistencias_semana'   => \App\Models\Asistencia::whereBetween('hora_registro',[$inicioSemana,$finSemana])->count(),
-            'asistencias_mes'      => \App\Models\Asistencia::whereBetween('hora_registro',[$inicioMes,$finMes])->count(),
-            'reservas_hoy'         => \App\Models\Reserva::whereDate('created_at', $hoy)->where('estado','confirmada')->count(),
+            'asistencias_semana'   => \App\Models\Asistencia::whereBetween('hora_registro', [$inicioSemana, $finSemana])->count(),
+            'asistencias_mes'      => \App\Models\Asistencia::whereBetween('hora_registro', [$inicioMes, $finMes])->count(),
+            'reservas_hoy'         => \App\Models\Reserva::whereDate('created_at', $hoy)->where('estado', 'confirmada')->count(),
             'tasa_ocupacion_mes'   => $this->calcularTasaOcupacion($inicioMes, $finMes),
-            'clientes_activos_mes' => \App\Models\Asistencia::whereBetween('hora_registro',[$inicioMes,$finMes])
+            'clientes_activos_mes' => \App\Models\Asistencia::whereBetween('hora_registro', [$inicioMes, $finMes])
                 ->distinct('cliente_id')->count('cliente_id'),
         ];
 
@@ -88,9 +88,9 @@ class DashboardController extends Controller
             ]);
 
         $proximasClases = \App\Models\Clase::with(['tipoClase', 'instructor'])
-            ->withCount(['reservas as reservas_count' => fn($q) => $q->where('estado','confirmada')])
+            ->withCount(['reservas as reservas_count' => fn($q) => $q->where('estado', 'confirmada')])
             ->whereDate('fecha_hora_inicio', $hoy)
-            ->where('estado','!=','cancelada')
+            ->where('estado', '!=', 'cancelada')
             ->orderBy('fecha_hora_inicio')
             ->limit(5)
             ->get()
@@ -103,20 +103,37 @@ class DashboardController extends Controller
                 'capacidad'  => $c->capacidad_maxima,
             ]);
 
+        // ── RF-15: Top 5 clientes más activos del mes ────────────────────────
+        $clientesMasActivos = \App\Models\Asistencia::select('cliente_id')
+            ->selectRaw('COUNT(*) as total_asistencias')
+            ->whereBetween('hora_registro', [$inicioMes, $finMes])
+            ->with('cliente:id,name,email')
+            ->groupBy('cliente_id')
+            ->orderByDesc('total_asistencias')
+            ->limit(5)
+            ->get()
+            ->map(fn($a) => [
+                'nombre'            => $a->cliente?->name ?? '—',
+                'email'             => $a->cliente?->email ?? '—',
+                'total_asistencias' => $a->total_asistencias,
+            ]);
+        // ────────────────────────────────────────────────────────────────────
+
         return Inertia::render('Admin/Dashboard', [
-            'user'             => $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url],
-            'stats'            => $stats,
-            'asistenciaPorDia' => $asistenciaPorDia,
-            'asistenciaPorMes' => $asistenciaPorMes,
-            'clasesPopulares'  => $clasesPopulares,
-            'horariosDemanda'  => $horariosDemanda,
-            'proximasClases'   => $proximasClases,
+            'user'                => $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url],
+            'stats'               => $stats,
+            'asistenciaPorDia'    => $asistenciaPorDia,
+            'asistenciaPorMes'    => $asistenciaPorMes,
+            'clasesPopulares'     => $clasesPopulares,
+            'horariosDemanda'     => $horariosDemanda,
+            'proximasClases'      => $proximasClases,
+            'clientesMasActivos'  => $clientesMasActivos,   // RF-15
         ]);
     }
 
     private function calcularTasaOcupacion($inicio, $fin): float
     {
-        $clases = \App\Models\Clase::withCount(['reservas as reservas_count' => fn($q) => $q->where('estado','confirmada')])
+        $clases = \App\Models\Clase::withCount(['reservas as reservas_count' => fn($q) => $q->where('estado', 'confirmada')])
             ->whereBetween('fecha_hora_inicio', [$inicio, $fin])
             ->where('estado', '!=', 'cancelada')
             ->where('capacidad_maxima', '>', 0)

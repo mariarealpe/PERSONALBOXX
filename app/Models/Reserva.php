@@ -17,11 +17,14 @@ class Reserva extends Model
         'estado',
         'fecha_reserva',
         'fecha_cancelacion',
+        'posicion_espera',
+        'notificado_cupo_at',
     ];
 
     protected $casts = [
-        'fecha_reserva'     => 'datetime',
-        'fecha_cancelacion' => 'datetime',
+        'fecha_reserva'      => 'datetime',
+        'fecha_cancelacion'  => 'datetime',
+        'notificado_cupo_at' => 'datetime',
     ];
 
     public function cliente()
@@ -32,5 +35,17 @@ class Reserva extends Model
     public function clase()
     {
         return $this->belongsTo(Clase::class, 'clase_id');
+    }
+
+    // ── Scopes útiles ────────────────────────────────────────────────────────
+
+    public function scopeConfirmadas($query)
+    {
+        return $query->where('estado', 'confirmada');
+    }
+
+    public function scopeEnEspera($query)
+    {
+        return $query->where('estado', 'en_espera')->orderBy('posicion_espera');
     }
 }
