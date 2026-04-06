@@ -101,6 +101,10 @@ export default function DashboardLayout({ children, user }) {
                         <span className="nav-icon">✅</span>
                         <span>Asistencias</span>
                     </Link>
+                    <Link href="/admin/planes" className={`nav-item ${isActive('/admin/planes') ? 'active' : ''}`}>
+                        <span className="nav-icon">💳</span>
+                        <span>Planes</span>
+                    </Link>
                     <Link href="/admin/reportes" className={`nav-item ${isActive('/admin/reportes') ? 'active' : ''}`}>
                         <span className="nav-icon">📈</span>
                         <span>Reportes</span>

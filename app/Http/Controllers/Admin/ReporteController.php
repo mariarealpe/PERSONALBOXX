@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Clase;
 use App\Models\Asistencia;
+use App\Models\Liquidacion;
 use App\Models\TipoClase;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -57,16 +58,15 @@ class ReporteController extends Controller
 
     public function asistenciaClase(Request $request)
     {
-        // Si no hay filtros, mostrar página vacía
         if (!$request->hasAny(['fecha_inicio', 'fecha_fin'])) {
             $instructores = User::role('instructor')->orderBy('name')->get(['id', 'name']);
             $tiposClase   = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
             return Inertia::render('Admin/Reportes/AsistenciaClase', [
-                'clases'      => [],
+                'clases'       => [],
                 'instructores' => $instructores,
-                'tiposClase'  => $tiposClase,
-                'filters'     => [
+                'tiposClase'   => $tiposClase,
+                'filters'      => [
                     'fecha_inicio'  => now()->startOfMonth()->format('Y-m-d'),
                     'fecha_fin'     => now()->format('Y-m-d'),
                     'instructor_id' => '',
@@ -98,10 +98,10 @@ class ReporteController extends Controller
         $tiposClase   = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre']);
 
         return Inertia::render('Admin/Reportes/AsistenciaClase', [
-            'clases'      => $clases,
+            'clases'       => $clases,
             'instructores' => $instructores,
-            'tiposClase'  => $tiposClase,
-            'filters'     => $validated,
+            'tiposClase'   => $tiposClase,
+            'filters'      => $validated,
         ]);
     }
 
@@ -109,15 +109,15 @@ class ReporteController extends Controller
     {
         $instructores = User::role('instructor')->orderBy('name')->get(['id', 'name']);
 
-        // Si no hay filtros, mostrar página vacía con el selector
         if (!$request->hasAny(['instructor_id', 'fecha_inicio', 'fecha_fin'])) {
             return Inertia::render('Admin/Reportes/Liquidacion', [
-                'instructor'  => null,
-                'clases'      => [],
-                'totalPago'   => 0,
-                'tarifas'     => ['por_clase' => 0, 'por_asistente' => 0],
-                'instructores' => $instructores,
-                'filters'     => [
+                'instructor'     => null,
+                'clases'         => [],
+                'totalPago'      => 0,
+                'tarifas'        => ['por_clase' => 0, 'por_asistente' => 0],
+                'instructores'   => $instructores,
+                'pagoRegistrado' => null,
+                'filters'        => [
                     'instructor_id' => '',
                     'fecha_inicio'  => now()->startOfMonth()->format('Y-m-d'),
                     'fecha_fin'     => now()->format('Y-m-d'),
@@ -131,21 +131,23 @@ class ReporteController extends Controller
             'fecha_fin'     => 'required|date|after_or_equal:fecha_inicio',
         ]);
 
-        $instructor = User::with('instructor')->find($validated['instructor_id']);
+        $instructor      = User::with('instructor')->find($validated['instructor_id']);
+        $instructorModel = $instructor->instructor;
 
+        $fechaInicio = Carbon::parse($validated['fecha_inicio'])->startOfDay();
+        $fechaFin    = Carbon::parse($validated['fecha_fin'])->endOfDay();
+
+        $tarifaPorClase     = optional($instructorModel)->tarifa_por_clase ?? 0;
+        $tarifaPorAsistente = optional($instructorModel)->tarifa_por_asistente ?? 0;
+
+        // ── Obtener clases finalizadas del instructor en el período ────────
         $clases = Clase::with(['tipoClase', 'asistencias'])
             ->withCount('asistencias')
             ->where('instructor_id', $validated['instructor_id'])
-            ->whereBetween('fecha_hora_inicio', [
-                $validated['fecha_inicio'],
-                Carbon::parse($validated['fecha_fin'])->endOfDay()
-            ])
+            ->whereBetween('fecha_hora_inicio', [$fechaInicio, $fechaFin])
             ->where('estado', 'finalizada')
             ->orderBy('fecha_hora_inicio')
             ->get();
-
-        $tarifaPorClase     = optional($instructor->instructor)->tarifa_por_clase ?? 0;
-        $tarifaPorAsistente = optional($instructor->instructor)->tarifa_por_asistente ?? 0;
 
         $totalPago = 0;
         foreach ($clases as $clase) {
@@ -155,13 +157,54 @@ class ReporteController extends Controller
             $totalPago += $clase->pago;
         }
 
+        // ── Lógica de pagoRegistrado ───────────────────────────────────────
+        //
+        // PROBLEMA ANTERIOR: se usaba solapamiento de fechas para detectar si
+        // ya se había pagado. Eso bloqueaba al admin aunque las clases anteriores
+        // ya habían sido eliminadas al liquidar, y las clases actuales son nuevas.
+        //
+        // SOLUCIÓN: el indicador de "ya pagado" se basa en si quedan clases
+        // finalizadas pendientes en el período, no en las fechas del historial.
+        //
+        // Reglas:
+        //  - Si hay clases finalizadas en el período → hay cobro pendiente,
+        //    mostrar el último pago del historial solo como REFERENCIA informativa
+        //    pero SIN bloquear el botón "Marcar como Pagado".
+        //  - Si NO hay clases finalizadas → no hay nada que pagar; mostrar
+        //    el último pago registrado como confirmación de que ya está al día.
+        //
+        $hayClasesPendientes = $clases->isNotEmpty();
+        $pagoRegistrado      = null;
+
+        if ($instructorModel) {
+            $ultimaLiquidacion = Liquidacion::where('instructor_id', $instructorModel->id)
+                ->orderByDesc('fecha_pago')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($ultimaLiquidacion) {
+                $pagoRegistrado = [
+                    'id'                  => $ultimaLiquidacion->id,
+                    'total_pago'          => $ultimaLiquidacion->total_pago,
+                    'fecha_pago'          => $ultimaLiquidacion->fecha_pago->format('d/m/Y'),
+                    'fecha_inicio'        => $ultimaLiquidacion->fecha_inicio->format('d/m/Y'),
+                    'fecha_fin'           => $ultimaLiquidacion->fecha_fin->format('d/m/Y'),
+                    'notas'               => $ultimaLiquidacion->notas,
+                    // Esta clave es la clave: si hay clases pendientes el frontend
+                    // NO bloquea el botón aunque exista historial previo.
+                    'hay_clases_pendientes' => $hayClasesPendientes,
+                ];
+            }
+        }
+
         return Inertia::render('Admin/Reportes/Liquidacion', [
-            'instructor'  => $instructor,
-            'clases'      => $clases,
-            'totalPago'   => $totalPago,
-            'tarifas'     => ['por_clase' => $tarifaPorClase, 'por_asistente' => $tarifaPorAsistente],
-            'instructores' => $instructores,
-            'filters'     => $validated,
+            'instructor'     => $instructor,
+            'clases'         => $clases,
+            'totalPago'      => $totalPago,
+            'tarifas'        => ['por_clase' => $tarifaPorClase, 'por_asistente' => $tarifaPorAsistente],
+            'instructores'   => $instructores,
+            'pagoRegistrado' => $pagoRegistrado,
+            'filters'        => $validated,
         ]);
     }
 }

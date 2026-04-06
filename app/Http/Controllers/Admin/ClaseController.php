@@ -18,8 +18,37 @@ use Inertia\Inertia;
 
 class ClaseController extends Controller
 {
+    /**
+     * Actualiza automáticamente el estado de las clases según la hora actual.
+     *
+     * - Si la hora actual está entre inicio y fin  → "en_curso"
+     * - Si la hora actual es posterior al fin      → "finalizada"
+     *
+     * Se ejecuta cada vez que se carga el listado de clases, sin necesidad de cron.
+     * Solo toca clases que aún están en "programada" o "en_curso" para no
+     * sobreescribir estados manuales como "cancelada".
+     */
+    private function actualizarEstadosAutomaticos(): void
+    {
+        $ahora = now();
+
+        // Programada → En Curso: ya empezó pero aún no terminó
+        Clase::where('estado', 'programada')
+            ->where('fecha_hora_inicio', '<=', $ahora)
+            ->where('fecha_hora_fin', '>', $ahora)
+            ->update(['estado' => 'en_curso']);
+
+        // Programada o En Curso → Finalizada: ya terminó
+        Clase::whereIn('estado', ['programada', 'en_curso'])
+            ->where('fecha_hora_fin', '<=', $ahora)
+            ->update(['estado' => 'finalizada']);
+    }
+
     public function index(Request $request)
     {
+        // ── Actualizar estados antes de mostrar el listado ─────────────────
+        $this->actualizarEstadosAutomaticos();
+
         $fecha         = $request->input('fecha', now()->format('Y-m-d'));
         $vista         = $request->input('vista', 'semana');
         $tipo_clase_id = $request->input('tipo_clase_id');
@@ -44,7 +73,21 @@ class ClaseController extends Controller
         if ($tipo_clase_id) $query->where('tipo_clase_id', $tipo_clase_id);
         if ($instructor_id) $query->where('instructor_id', $instructor_id);
 
-        $clases       = $query->orderBy('fecha_hora_inicio', 'desc')->get();
+        $clases = $query->orderBy('fecha_hora_inicio', 'desc')->get()
+            ->map(function ($clase) {
+                // ── Formatear fechas como hora local (sin conversión UTC) ──
+                // Laravel serializa Carbon como ISO 8601 UTC por defecto.
+                // Al usar ->format() obtenemos el string en hora local del servidor,
+                // que es lo que el input datetime-local necesita para mostrar bien.
+                $clase->fecha_hora_inicio_local = $clase->fecha_hora_inicio
+                    ? $clase->fecha_hora_inicio->format('Y-m-d\TH:i')
+                    : null;
+                $clase->fecha_hora_fin_local = $clase->fecha_hora_fin
+                    ? $clase->fecha_hora_fin->format('Y-m-d\TH:i')
+                    : null;
+                return $clase;
+            });
+
         $tiposClase   = TipoClase::where('activo', true)->orderBy('nombre')->get(['id', 'nombre', 'color']);
         $instructores = User::role('instructor')->orderBy('name')->get(['id', 'name']);
 
@@ -61,12 +104,18 @@ class ClaseController extends Controller
         ]);
     }
 
-    // ── Detalle de clase con listado completo de reservas ─────────────────
     public function show(Clase $clase)
     {
+        // ── Actualizar estado de esta clase antes de mostrarla ─────────────
+        $ahora = now();
+        if ($clase->estado === 'programada' && $clase->fecha_hora_inicio <= $ahora && $clase->fecha_hora_fin > $ahora) {
+            $clase->update(['estado' => 'en_curso']);
+        } elseif (in_array($clase->estado, ['programada', 'en_curso']) && $clase->fecha_hora_fin <= $ahora) {
+            $clase->update(['estado' => 'finalizada']);
+        }
+
         $clase->load(['tipoClase', 'instructor']);
 
-        // Reservas agrupadas por estado
         $reservas = Reserva::where('clase_id', $clase->id)
             ->with('cliente:id,name,email,foto')
             ->orderByRaw("FIELD(estado, 'confirmada', 'en_espera', 'cancelada', 'completada')")
@@ -75,13 +124,13 @@ class ClaseController extends Controller
             ->get()
             ->map(function ($r) {
                 return [
-                    'id'               => $r->id,
-                    'estado'           => $r->estado,
-                    'posicion_espera'  => $r->posicion_espera,
-                    'fecha_reserva'    => $r->fecha_reserva,
-                    'fecha_cancelacion'=> $r->fecha_cancelacion,
+                    'id'                 => $r->id,
+                    'estado'             => $r->estado,
+                    'posicion_espera'    => $r->posicion_espera,
+                    'fecha_reserva'      => $r->fecha_reserva,
+                    'fecha_cancelacion'  => $r->fecha_cancelacion,
                     'notificado_cupo_at' => $r->notificado_cupo_at,
-                    'cliente' => $r->cliente ? [
+                    'cliente'            => $r->cliente ? [
                         'id'    => $r->cliente->id,
                         'name'  => $r->cliente->name,
                         'email' => $r->cliente->email,
@@ -89,20 +138,19 @@ class ClaseController extends Controller
                 ];
             });
 
-        // Conteos por estado
         $resumen = [
-            'confirmadas' => $reservas->where('estado', 'confirmada')->count(),
-            'en_espera'   => $reservas->where('estado', 'en_espera')->count(),
-            'canceladas'  => $reservas->where('estado', 'cancelada')->count(),
-            'completadas' => $reservas->where('estado', 'completada')->count(),
-            'capacidad'   => $clase->capacidad_maxima,
-            'cupos_libres'=> $clase->capacidad_maxima - $reservas->where('estado', 'confirmada')->count(),
+            'confirmadas'  => $reservas->where('estado', 'confirmada')->count(),
+            'en_espera'    => $reservas->where('estado', 'en_espera')->count(),
+            'canceladas'   => $reservas->where('estado', 'cancelada')->count(),
+            'completadas'  => $reservas->where('estado', 'completada')->count(),
+            'capacidad'    => $clase->capacidad_maxima,
+            'cupos_libres' => $clase->capacidad_maxima - $reservas->where('estado', 'confirmada')->count(),
         ];
 
         return Inertia::render('Admin/Clases/Show', [
-            'clase'   => $clase,
-            'reservas'=> $reservas->values(),
-            'resumen' => $resumen,
+            'clase'    => $clase,
+            'reservas' => $reservas->values(),
+            'resumen'  => $resumen,
         ]);
     }
 
@@ -180,12 +228,9 @@ class ClaseController extends Controller
             ]);
         }
 
-        // ── Guardar capacidad anterior ANTES de actualizar ─────────────────
         $capacidadAnterior = $clase->capacidad_maxima;
 
-        // ── RF-02: Detectar cambios significativos ─────────────────────────
         $cambios = [];
-
         if ($clase->fecha_hora_inicio->format('Y-m-d H:i') !== Carbon::parse($validated['fecha_hora_inicio'])->format('Y-m-d H:i')) {
             $cambios['Fecha y hora de inicio'] = [
                 'anterior' => $clase->fecha_hora_inicio->locale('es')->isoFormat('ddd D/MMM HH:mm'),
@@ -221,7 +266,6 @@ class ClaseController extends Controller
             'estado'            => $validated['estado'] ?? $clase->estado,
         ]);
 
-        // ── RF-02: Notificar si hubo cambios ───────────────────────────────
         if (!empty($cambios)) {
             $clase->load('tipoClase', 'instructor');
             $clientesConReserva = $clase->reservasConfirmadas()
@@ -239,7 +283,6 @@ class ClaseController extends Controller
             }
         }
 
-        // ── RF-08: Si aumentó la capacidad, promover lista de espera ───────
         $nuevaCapacidad = (int) $validated['capacidad_maxima'];
         if ($nuevaCapacidad > $capacidadAnterior) {
             $clase->load('tipoClase', 'instructor');
@@ -255,8 +298,19 @@ class ClaseController extends Controller
         return redirect()->back()->with('success', '¡Clase actualizada exitosamente!');
     }
 
+    /**
+     * Eliminar una clase.
+     * Las clases finalizadas NO se pueden eliminar manualmente.
+     * Solo se eliminan automáticamente al registrar el pago de liquidación.
+     */
     public function destroy(Clase $clase)
     {
+        if ($clase->estado === 'finalizada') {
+            return back()->withErrors([
+                'delete' => 'Las clases finalizadas no se pueden eliminar manualmente. Se eliminan automáticamente al registrar el pago de liquidación del instructor.',
+            ]);
+        }
+
         $clase->load('tipoClase', 'instructor');
         $clientesConReserva = $clase->reservasConfirmadas()
             ->with('cliente')

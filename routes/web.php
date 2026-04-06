@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\ClaseController;
 use App\Http\Controllers\Admin\ClienteController;
 use App\Http\Controllers\Admin\AsistenciaController;
 use App\Http\Controllers\Admin\ReporteController;
+use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\ActivarCuentaController;
 use App\Http\Controllers\Instructor\InstructorController as InstructorPortalController;
@@ -92,6 +93,13 @@ Route::middleware(['auth', 'role:administrador'])->prefix('admin')->name('admin.
     Route::get('/asistencias', [AsistenciaController::class, 'index'])->name('asistencias.index');
     Route::post('/asistencias', [AsistenciaController::class, 'registrar'])->name('asistencias.registrar');
     Route::delete('/asistencias/{asistencia}', [AsistenciaController::class, 'eliminar'])->name('asistencias.eliminar');
+
+    // Planes
+    Route::get('/planes', [PlanController::class, 'index'])->name('planes.index');
+    Route::post('/planes', [PlanController::class, 'store'])->name('planes.store');
+    Route::put('/planes/{plan}', [PlanController::class, 'update'])->name('planes.update');
+    Route::delete('/planes/{plan}', [PlanController::class, 'destroy'])->name('planes.destroy');
+    Route::patch('/planes/{plan}/toggle', [PlanController::class, 'toggleActivo'])->name('planes.toggle');
 
     // Reportes
     Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');

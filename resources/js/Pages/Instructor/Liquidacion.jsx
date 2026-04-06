@@ -9,6 +9,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
 
     const hasData    = clases && clases.length > 0;
     const tipoTarifa = instructor?.tarifa_por_asistente > 0 ? 'por_asistente' : 'por_clase';
+    const yaPagado   = !!pagoRegistrado;
 
     const calcular = () => {
         if (!fechaInicio || !fechaFin) return;
@@ -74,7 +75,13 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                     <button
                         onClick={calcular}
                         disabled={!fechaInicio || !fechaFin}
-                        style={{ background: !fechaInicio || !fechaFin ? 'rgba(255,20,147,0.3)' : 'linear-gradient(135deg,#FF1493,#e60083)', border: 'none', color: '#000', padding: '0.625rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: !fechaInicio || !fechaFin ? 'not-allowed' : 'pointer', fontSize: '0.875rem' }}
+                        style={{
+                            background: !fechaInicio || !fechaFin ? 'rgba(255,20,147,0.3)' : 'linear-gradient(135deg,#FF1493,#e60083)',
+                            border: 'none', color: '#000', padding: '0.625rem 1.5rem',
+                            borderRadius: 8, fontWeight: 700,
+                            cursor: !fechaInicio || !fechaFin ? 'not-allowed' : 'pointer',
+                            fontSize: '0.875rem',
+                        }}
                     >
                         📊 Calcular
                     </button>
@@ -89,7 +96,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                 {pagoRegistrado && (
                     <div style={{
                         background: 'rgba(34,197,94,0.08)',
-                        border: '2px solid rgba(34,197,94,0.5)',
+                        border: '2px solid rgba(34,197,94,0.55)',
                         borderRadius: 12,
                         padding: '1.25rem 1.5rem',
                         marginBottom: '2rem',
@@ -102,7 +109,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                         <span style={{ fontSize: '2rem' }}>✅</span>
                         <div style={{ flex: 1 }}>
                             <p style={{ color: '#22c55e', fontWeight: 900, margin: '0 0 0.25rem', fontSize: '1rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                Pago ya registrado para este período
+                                Tu pago ya fue registrado para este período
                             </p>
                             <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
                                 Período: <strong style={{ color: '#ccc' }}>{pagoRegistrado.fecha_inicio} — {pagoRegistrado.fecha_fin}</strong>
@@ -113,7 +120,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                                 )}
                             </p>
                         </div>
-                        <div style={{ background: 'rgba(34,197,94,0.15)', border: '2px solid #22c55e', borderRadius: 10, padding: '0.5rem 1.25rem', textAlign: 'center' }}>
+                        <div style={{ background: 'rgba(34,197,94,0.15)', border: '2px solid #22c55e', borderRadius: 10, padding: '0.5rem 1.25rem', textAlign: 'center', minWidth: 140 }}>
                             <p style={{ color: '#999', fontSize: '0.7rem', margin: '0 0 0.2rem', textTransform: 'uppercase', letterSpacing: 1 }}>Total Pagado</p>
                             <p style={{ color: '#22c55e', fontWeight: 900, fontSize: '1.4rem', margin: 0 }}>{fmtCOP(pagoRegistrado.total_pago)}</p>
                         </div>
@@ -142,11 +149,16 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                         </div>
 
                         {/* Tabla detalle */}
-                        <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 0 30px rgba(255,20,147,0.1)' }}>
-                            <div style={{ padding: '1rem 1.5rem', borderBottom: '2px solid rgba(255,20,147,0.2)' }}>
+                        <div style={{ background: 'rgba(10,10,10,0.95)', border: yaPagado ? '2px solid rgba(34,197,94,0.4)' : '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 0 30px rgba(255,20,147,0.1)' }}>
+                            <div style={{ padding: '1rem 1.5rem', borderBottom: '2px solid rgba(255,20,147,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 <h3 style={{ color: '#FF1493', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
                                     Detalle por Clase · {periodoLabel}
                                 </h3>
+                                {yaPagado && (
+                                    <span style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid #22c55e', color: '#22c55e', borderRadius: 20, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        ✅ Período ya pagado
+                                    </span>
+                                )}
                             </div>
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>

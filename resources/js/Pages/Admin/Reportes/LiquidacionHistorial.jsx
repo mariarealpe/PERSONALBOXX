@@ -10,15 +10,36 @@ function loadJsPDF(cb) {
     document.head.appendChild(s);
 }
 
+/**
+ * Formatea una fecha que puede llegar en cualquiera de estos formatos:
+ *   - '2026-03-26'                      (string date puro)
+ *   - '2026-03-26T00:00:00.000000Z'     (ISO UTC serializado por Laravel Carbon)
+ *   - '2026-03-26T05:00:00.000000Z'     (con offset)
+ *
+ * La solución: tomar solo la parte antes de la T (la fecha), parsear
+ * los componentes manualmente y construir la fecha sin conversión de zona.
+ * Así '2026-03-26T00:00:00.000000Z' nunca se convierte a '2026-03-25' por UTC-5.
+ */
+function fmtD(d) {
+    if (!d) return '—';
+    // Tomar solo la parte de fecha (antes de la T si la hay)
+    const soloFecha = String(d).split('T')[0];
+    const partes    = soloFecha.split('-');
+    if (partes.length !== 3) return '—';
+    const [anio, mes, dia] = partes.map(Number);
+    if (!anio || !mes || !dia) return '—';
+    // new Date(año, mes-1, día) crea la fecha en hora local sin UTC
+    return new Date(anio, mes - 1, dia)
+        .toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 function exportarPDF(liquidaciones) {
     loadJsPDF((jsPDF) => {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
         const W = doc.internal.pageSize.getWidth();
         const pink = [255, 20, 147], dark = [15, 15, 15], gray = [150, 150, 150], green = [34, 197, 94];
-        const fmt  = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
-        const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        const fmt = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
 
-        // Header
         doc.setFillColor(...dark); doc.rect(0, 0, W, 26, 'F');
         doc.setFontSize(16); doc.setTextColor(...pink); doc.setFont('helvetica', 'bold');
         doc.text('PERSONAL BOX ARMENIA', 14, 11);
@@ -27,7 +48,6 @@ function exportarPDF(liquidaciones) {
         doc.setFontSize(8); doc.setTextColor(...gray); doc.setFont('helvetica', 'normal');
         doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, W - 14, 20, { align: 'right' });
 
-        // Totales rápidos
         const totalHistorico = liquidaciones.reduce((s, l) => s + parseFloat(l.total_pago), 0);
         doc.setFillColor(20, 20, 20); doc.roundedRect(14, 30, W - 28, 16, 3, 3, 'F');
         doc.setFontSize(8); doc.setTextColor(...gray);
@@ -35,7 +55,6 @@ function exportarPDF(liquidaciones) {
         doc.setFontSize(11); doc.setTextColor(...green); doc.setFont('helvetica', 'bold');
         doc.text(`Total histórico: ${fmt(totalHistorico)}`, W - 20, 40, { align: 'right' });
 
-        // Tabla
         const headers = ['Instructor', 'Período', 'Clases', 'Asistentes', 'Tarifa', 'Total Pagado', 'Fecha Pago'];
         const colW    = [40, 42, 16, 22, 30, 38, 30];
         let y = 52;
@@ -50,7 +69,6 @@ function exportarPDF(liquidaciones) {
             if (y > 185) { doc.addPage(); y = 14; }
             doc.setFillColor(idx % 2 === 0 ? 20 : 12, idx % 2 === 0 ? 20 : 12, idx % 2 === 0 ? 20 : 12);
             doc.rect(14, y, W - 28, 8, 'F');
-
             const row = [
                 l.instructor_nombre,
                 `${fmtD(l.fecha_inicio)} – ${fmtD(l.fecha_fin)}`,
@@ -60,7 +78,6 @@ function exportarPDF(liquidaciones) {
                 fmt(l.total_pago),
                 fmtD(l.fecha_pago),
             ];
-
             doc.setFont('helvetica', 'normal'); doc.setFontSize(7); cx = 14;
             row.forEach((val, i) => {
                 doc.setTextColor(i === 5 ? green[0] : 200, i === 5 ? green[1] : 200, i === 5 ? green[2] : 200);
@@ -70,7 +87,6 @@ function exportarPDF(liquidaciones) {
             y += 8;
         });
 
-        // Total final
         doc.setFillColor(10, 10, 10); doc.rect(14, y, W - 28, 10, 'F');
         doc.setFontSize(9); doc.setTextColor(...green); doc.setFont('helvetica', 'bold');
         doc.text(fmt(totalHistorico), W - 12, y + 7, { align: 'right' });
@@ -83,8 +99,7 @@ function exportarPDF(liquidaciones) {
 
 function exportarExcel(liquidaciones) {
     import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs').then((XLSX) => {
-        const fmt  = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
-        const fmtD = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-CO') : '—';
+        const fmt   = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
         const total = liquidaciones.reduce((s, l) => s + parseFloat(l.total_pago), 0);
 
         const rows = [
@@ -120,7 +135,6 @@ function exportarExcel(liquidaciones) {
 export default function LiquidacionHistorial({ auth, liquidaciones }) {
     const green = '#22c55e';
     const fmt   = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
-    const fmtD  = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
     const totalHistorico = liquidaciones.reduce((s, l) => s + parseFloat(l.total_pago), 0);
 
     const handleDelete = (id) => {
@@ -152,7 +166,6 @@ export default function LiquidacionHistorial({ auth, liquidaciones }) {
                         </p>
                     </div>
 
-                    {/* ── RF-17: Botones de exportación ── */}
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         {liquidaciones.length > 0 && (
                             <>
@@ -204,17 +217,33 @@ export default function LiquidacionHistorial({ auth, liquidaciones }) {
                             </tr>
                         ) : liquidaciones.map((l) => (
                             <tr key={l.id} style={{ borderBottom: `1px solid ${green}18` }}>
-                                <td style={{ padding: '1rem', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>{l.instructor_nombre}</td>
-                                <td style={{ padding: '1rem', color: '#999', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{fmtD(l.fecha_inicio)} — {fmtD(l.fecha_fin)}</td>
-                                <td style={{ padding: '1rem', color: '#ccc', textAlign: 'center' }}>{l.total_clases}</td>
-                                <td style={{ padding: '1rem', color: '#ccc', textAlign: 'center' }}>{l.total_asistentes}</td>
+                                <td style={{ padding: '1rem', color: '#fff', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                    {l.instructor_nombre}
+                                </td>
+                                <td style={{ padding: '1rem', color: '#999', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                    {fmtD(l.fecha_inicio)} — {fmtD(l.fecha_fin)}
+                                </td>
+                                <td style={{ padding: '1rem', color: '#ccc', textAlign: 'center' }}>
+                                    {l.total_clases}
+                                </td>
+                                <td style={{ padding: '1rem', color: '#ccc', textAlign: 'center' }}>
+                                    {l.total_asistentes}
+                                </td>
                                 <td style={{ padding: '1rem', color: '#999', fontSize: '0.8rem' }}>
                                     {l.tipo_tarifa === 'por_asistente' ? '👥 Por asistente' : '💼 Por clase'}
                                 </td>
-                                <td style={{ padding: '1rem', color: '#ccc', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{fmt(l.tarifa_aplicada)}</td>
-                                <td style={{ padding: '1rem', color: green, fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>{fmt(l.total_pago)}</td>
-                                <td style={{ padding: '1rem', color: '#ccc', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{fmtD(l.fecha_pago)}</td>
-                                <td style={{ padding: '1rem', color: '#666', fontSize: '0.8rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.notas || '—'}</td>
+                                <td style={{ padding: '1rem', color: '#ccc', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                                    {fmt(l.tarifa_aplicada)}
+                                </td>
+                                <td style={{ padding: '1rem', color: green, fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>
+                                    {fmt(l.total_pago)}
+                                </td>
+                                <td style={{ padding: '1rem', color: '#ccc', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                                    {fmtD(l.fecha_pago)}
+                                </td>
+                                <td style={{ padding: '1rem', color: '#666', fontSize: '0.8rem', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {l.notas || '—'}
+                                </td>
                                 <td style={{ padding: '1rem' }}>
                                     <button
                                         onClick={() => handleDelete(l.id)}

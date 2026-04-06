@@ -105,13 +105,15 @@ function exportarExcel(instructor, clases, totalPago, tarifas, filters) {
 }
 
 // ── Modal para registrar pago ─────────────────────────────────────────────────
-function ModalPago({ instructor, clases, totalPago, tarifas, filters, onClose }) {
-    const green = '#22c55e';
-    const fmt   = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
-    const tipoTarifa = tarifas.por_asistente > 0 ? 'por_asistente' : 'por_clase';
+function ModalPago({ instructor, clases, totalPago, tarifas, filters, onClose, onExito }) {
+    const green          = '#22c55e';
+    const fmt            = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
+    const tipoTarifa     = tarifas.por_asistente > 0 ? 'por_asistente' : 'por_clase';
     const tarifaAplicada = tipoTarifa === 'por_asistente' ? tarifas.por_asistente : tarifas.por_clase;
 
-    const { data, setData, post, processing, errors } = useForm({
+    const [fase, setFase] = useState('form');
+
+    const { data, setData, errors } = useForm({
         instructor_id:    instructor.id,
         fecha_inicio:     filters.fecha_inicio,
         fecha_fin:        filters.fecha_fin,
@@ -124,50 +126,84 @@ function ModalPago({ instructor, clases, totalPago, tarifas, filters, onClose })
         notas:            '',
     });
 
+    const confirmar = () => {
+        if (fase !== 'form') return;
+        setFase('loading');
+        router.post(route('admin.reportes.liquidacion.historial.store'), data, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setFase('exito');
+                setTimeout(() => { onExito(); }, 2000);
+            },
+            onError: () => { setFase('form'); },
+        });
+    };
+
     const inputStyle = { width: '100%', padding: '0.65rem', background: '#000', border: `2px solid ${green}44`, borderRadius: 8, color: '#fff', fontSize: '0.85rem', boxSizing: 'border-box' };
     const labelStyle = { display: 'block', color: green, fontSize: '0.68rem', fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: 1 };
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
             <div style={{ background: '#0a0a0a', border: `2px solid ${green}55`, borderRadius: 16, padding: '2rem', maxWidth: 480, width: '100%', boxShadow: `0 0 40px ${green}30` }}>
-                <h2 style={{ color: green, fontWeight: 900, margin: '0 0 0.5rem', fontSize: '1.25rem' }}>✅ Registrar Pago</h2>
-                <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 1.5rem' }}>Instructor: <strong style={{ color: '#fff' }}>{instructor.name}</strong></p>
 
-                <div style={{ background: '#111', borderRadius: 8, padding: '1rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: '#999', fontSize: '0.8rem' }}>Total a registrar</span>
-                    <span style={{ color: green, fontWeight: 900, fontSize: '1.5rem' }}>{fmt(totalPago)}</span>
-                </div>
-
-                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
-                    <div>
-                        <label style={labelStyle}>Fecha de Pago *</label>
-                        <input type="date" value={data.fecha_pago} onChange={e => setData('fecha_pago', e.target.value)} style={inputStyle} />
+                {fase === 'exito' && (
+                    <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                        <div style={{ width: 72, height: 72, borderRadius: '50%', background: `rgba(34,197,94,0.15)`, border: `3px solid ${green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: '2rem' }}>✅</div>
+                        <h2 style={{ color: green, fontWeight: 900, margin: '0 0 0.5rem', fontSize: '1.4rem' }}>¡Pago registrado!</h2>
+                        <p style={{ color: '#999', margin: '0 0 0.25rem', fontSize: '0.9rem' }}>Se registró el pago de <strong style={{ color: '#fff' }}>{fmt(totalPago)}</strong></p>
+                        <p style={{ color: '#666', margin: 0, fontSize: '0.8rem' }}>para <strong style={{ color: '#ccc' }}>{instructor.name}</strong></p>
+                        <div style={{ marginTop: '1.5rem', background: 'rgba(34,197,94,0.08)', border: `1px solid ${green}44`, borderRadius: 8, padding: '0.75rem', color: '#666', fontSize: '0.75rem' }}>
+                            Cerrando automáticamente…
+                        </div>
                     </div>
-                    <div>
-                        <label style={labelStyle}>Notas (opcional)</label>
-                        <textarea value={data.notas} onChange={e => setData('notas', e.target.value)} rows={3}
-                                  placeholder="Ej: Pago por transferencia, comprobante #123..."
-                                  style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
-                    </div>
-                </div>
+                )}
 
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                    <button onClick={onClose} style={{ background: 'transparent', border: '2px solid #444', color: '#999', padding: '0.6rem 1.2rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
-                        Cancelar
-                    </button>
-                    <button onClick={() => post(route('admin.reportes.liquidacion.historial.store'))} disabled={processing}
-                            style={{ background: `linear-gradient(135deg,${green},#16a34a)`, border: 'none', color: '#000', padding: '0.6rem 1.5rem', borderRadius: 8, cursor: 'pointer', fontWeight: 900, opacity: processing ? 0.6 : 1 }}>
-                        {processing ? 'Guardando...' : '💾 Confirmar Pago'}
-                    </button>
-                </div>
+                {fase === 'loading' && (
+                    <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                        <div style={{ width: 52, height: 52, borderRadius: '50%', border: `4px solid ${green}33`, borderTop: `4px solid ${green}`, margin: '0 auto 1.25rem', animation: 'spin 0.8s linear infinite' }} />
+                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                        <p style={{ color: green, fontWeight: 700, margin: 0 }}>Registrando pago…</p>
+                    </div>
+                )}
+
+                {fase === 'form' && (
+                    <>
+                        <h2 style={{ color: green, fontWeight: 900, margin: '0 0 0.5rem', fontSize: '1.25rem' }}>✅ Registrar Pago</h2>
+                        <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 1.5rem' }}>Instructor: <strong style={{ color: '#fff' }}>{instructor.name}</strong></p>
+                        <div style={{ background: '#111', borderRadius: 8, padding: '1rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#999', fontSize: '0.8rem' }}>Total a registrar</span>
+                            <span style={{ color: green, fontWeight: 900, fontSize: '1.5rem' }}>{fmt(totalPago)}</span>
+                        </div>
+                        <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={labelStyle}>Fecha de Pago *</label>
+                                <input type="date" value={data.fecha_pago} onChange={e => setData('fecha_pago', e.target.value)} style={inputStyle} />
+                                {errors.fecha_pago && <p style={{ color: '#ef4444', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>{errors.fecha_pago}</p>}
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Notas (opcional)</label>
+                                <textarea value={data.notas} onChange={e => setData('notas', e.target.value)} rows={3} placeholder="Ej: Pago por transferencia, comprobante #123..." style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                            <button onClick={onClose} style={{ background: 'transparent', border: '2px solid #444', color: '#999', padding: '0.6rem 1.2rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
+                                Cancelar
+                            </button>
+                            <button onClick={confirmar} style={{ background: `linear-gradient(135deg,${green},#16a34a)`, border: 'none', color: '#000', padding: '0.6rem 1.5rem', borderRadius: 8, cursor: 'pointer', fontWeight: 900 }}>
+                                💾 Confirmar Pago
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export default function Liquidacion({ auth, instructor, clases, totalPago, tarifas, instructores, filters }) {
+export default function Liquidacion({ auth, instructor, clases, totalPago, tarifas, instructores, filters, pagoRegistrado }) {
     const [modalAbierto, setModalAbierto] = useState(false);
+
     const { data, setData, get, processing } = useForm({
         instructor_id: filters?.instructor_id || '',
         fecha_inicio:  filters?.fecha_inicio  || new Date().toISOString().split('T')[0],
@@ -176,14 +212,30 @@ export default function Liquidacion({ auth, instructor, clases, totalPago, tarif
 
     const handleSubmit = (e) => { e.preventDefault(); get(route('admin.reportes.liquidacion')); };
 
-    const fmt = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
+    const fmt        = (n) => `$${new Intl.NumberFormat('es-CO').format(n ?? 0)}`;
     const formatDate = (d) => d ? new Date(d).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : '-';
-    const green = '#22c55e';
+    const green      = '#22c55e';
 
     const inputStyle = { width: '100%', padding: '0.75rem', background: '#000', border: `2px solid ${green}44`, borderRadius: 8, color: '#fff', fontSize: '0.875rem', boxSizing: 'border-box' };
     const labelStyle = { display: 'block', color: green, fontSize: '0.7rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 };
     const boxStyle   = { background: 'rgba(10,10,10,0.95)', border: `2px solid ${green}44`, borderRadius: 12, padding: '1.5rem', boxShadow: `0 0 20px ${green}10` };
     const exportFilters = filters || { fecha_inicio: data.fecha_inicio, fecha_fin: data.fecha_fin };
+
+    // ── Lógica de bloqueo corregida ────────────────────────────────────────
+    // Si hay clases finalizadas pendientes → el botón está ACTIVO (hay algo que pagar)
+    // Si NO hay clases finalizadas → el botón está BLOQUEADO (no hay nada que pagar)
+    // El historial previo se muestra como referencia pero NO bloquea si hay clases nuevas.
+    const hayClasesPendientes = clases && clases.length > 0;
+    const yaPagado            = pagoRegistrado && !pagoRegistrado.hay_clases_pendientes;
+
+    const handleExito = () => {
+        setModalAbierto(false);
+        router.get(route('admin.reportes.liquidacion'), {
+            instructor_id: filters?.instructor_id,
+            fecha_inicio:  filters?.fecha_inicio,
+            fecha_fin:     filters?.fecha_fin,
+        }, { preserveScroll: false });
+    };
 
     return (
         <DashboardLayout user={auth.user}>
@@ -197,21 +249,24 @@ export default function Liquidacion({ auth, instructor, clases, totalPago, tarif
                     tarifas={tarifas}
                     filters={exportFilters}
                     onClose={() => setModalAbierto(false)}
+                    onExito={handleExito}
                 />
             )}
 
             <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+
+                {/* Encabezado */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: green, margin: 0, textShadow: `0 0 10px ${green}80` }}>LIQUIDACIÓN</h1>
                         <p style={{ color: '#999', margin: '0.5rem 0 0', fontSize: '0.875rem' }}>Cálculo de pagos a instructores</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {/* Historial */}
                         <a href={route('admin.reportes.liquidacion.historial')}
                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(99,102,241,0.1)', border: '2px solid rgba(99,102,241,0.5)', color: '#818cf8', padding: '0.5rem 1rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none' }}>
                             📋 Ver Historial
                         </a>
+
                         {instructor && clases.length > 0 && (
                             <>
                                 <span style={{ color: '#444', fontSize: '0.75rem' }}>Exportar:</span>
@@ -227,11 +282,32 @@ export default function Liquidacion({ auth, instructor, clases, totalPago, tarif
                                         onMouseOut={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}>
                                     📊 Excel
                                 </button>
-                                <button onClick={() => setModalAbierto(true)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: `linear-gradient(135deg,${green},#16a34a)`, border: 'none', color: '#000', padding: '0.5rem 1.25rem', borderRadius: 8, cursor: 'pointer', fontWeight: 900, fontSize: '0.85rem' }}>
-                                    ✅ Marcar como Pagado
-                                </button>
                             </>
+                        )}
+
+                        {/* Botón pago — visible solo cuando hay clases que liquidar */}
+                        {instructor && (
+                            <button
+                                onClick={() => { if (hayClasesPendientes && !yaPagado) setModalAbierto(true); }}
+                                title={
+                                    !hayClasesPendientes
+                                        ? 'No hay clases finalizadas pendientes de pago en este período'
+                                        : 'Registrar pago de este período'
+                                }
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                    background: hayClasesPendientes
+                                        ? `linear-gradient(135deg,${green},#16a34a)`
+                                        : 'rgba(107,114,128,0.15)',
+                                    border: hayClasesPendientes ? 'none' : '2px solid rgba(107,114,128,0.3)',
+                                    color: hayClasesPendientes ? '#000' : '#6b7280',
+                                    padding: '0.5rem 1.25rem', borderRadius: 8,
+                                    cursor: hayClasesPendientes ? 'pointer' : 'not-allowed',
+                                    fontWeight: 900, fontSize: '0.85rem',
+                                    opacity: hayClasesPendientes ? 1 : 0.6,
+                                }}>
+                                {hayClasesPendientes ? '✅ Marcar como Pagado' : '🔒 Sin pendientes'}
+                            </button>
                         )}
                     </div>
                 </div>
@@ -245,26 +321,88 @@ export default function Liquidacion({ auth, instructor, clases, totalPago, tarif
                             {instructores.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                         </select>
                     </div>
-                    <div><label style={labelStyle}>Fecha Inicio *</label><input type="date" value={data.fecha_inicio} onChange={e => setData('fecha_inicio', e.target.value)} required style={inputStyle} /></div>
-                    <div><label style={labelStyle}>Fecha Fin *</label><input type="date" value={data.fecha_fin} onChange={e => setData('fecha_fin', e.target.value)} required style={inputStyle} /></div>
+                    <div>
+                        <label style={labelStyle}>Fecha Inicio *</label>
+                        <input type="date" value={data.fecha_inicio} onChange={e => setData('fecha_inicio', e.target.value)} required style={inputStyle} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Fecha Fin *</label>
+                        <input type="date" value={data.fecha_fin} onChange={e => setData('fecha_fin', e.target.value)} required style={inputStyle} />
+                    </div>
                     <button type="submit" disabled={processing} style={{ background: `linear-gradient(135deg,${green},#16a34a)`, color: '#000', border: 'none', padding: '0.75rem 1.5rem', borderRadius: 8, fontWeight: 900, cursor: 'pointer', opacity: processing ? 0.5 : 1 }}>
                         💰 {processing ? 'Calculando...' : 'Calcular'}
                     </button>
                 </form>
 
+                {/* Banner: referencia del último pago (informativo, no bloqueante si hay clases pendientes) */}
+                {pagoRegistrado && instructor && (
+                    <div style={{
+                        background: hayClasesPendientes ? 'rgba(234,179,8,0.06)' : 'rgba(34,197,94,0.08)',
+                        border: `2px solid ${hayClasesPendientes ? 'rgba(234,179,8,0.4)' : 'rgba(34,197,94,0.55)'}`,
+                        borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '2rem',
+                        display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap',
+                    }}>
+                        <span style={{ fontSize: '1.5rem' }}>{hayClasesPendientes ? '📋' : '✅'}</span>
+                        <div style={{ flex: 1 }}>
+                            <p style={{
+                                color: hayClasesPendientes ? '#eab308' : green,
+                                fontWeight: 900, margin: '0 0 0.3rem', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: 1,
+                            }}>
+                                {hayClasesPendientes
+                                    ? 'Último pago registrado (hay clases nuevas pendientes)'
+                                    : 'Al día — no hay clases pendientes de pago'}
+                            </p>
+                            <p style={{ color: '#999', margin: 0, fontSize: '0.85rem' }}>
+                                Período: <strong style={{ color: '#ccc' }}>{pagoRegistrado.fecha_inicio} — {pagoRegistrado.fecha_fin}</strong>
+                                &nbsp;·&nbsp; Fecha de pago: <strong style={{ color: '#ccc' }}>{pagoRegistrado.fecha_pago}</strong>
+                                {pagoRegistrado.notas && <>&nbsp;·&nbsp;Nota: <em style={{ color: '#aaa' }}>{pagoRegistrado.notas}</em></>}
+                            </p>
+                        </div>
+                        <div style={{
+                            background: hayClasesPendientes ? 'rgba(234,179,8,0.1)' : 'rgba(34,197,94,0.15)',
+                            border: `2px solid ${hayClasesPendientes ? '#eab308' : green}`,
+                            borderRadius: 10, padding: '0.5rem 1.25rem', textAlign: 'center', minWidth: 140,
+                        }}>
+                            <p style={{ color: '#999', fontSize: '0.7rem', margin: '0 0 0.2rem', textTransform: 'uppercase', letterSpacing: 1 }}>Último pago</p>
+                            <p style={{ color: hayClasesPendientes ? '#eab308' : green, fontWeight: 900, fontSize: '1.4rem', margin: 0 }}>
+                                {fmt(pagoRegistrado.total_pago)}
+                            </p>
+                        </div>
+                        <a href={route('admin.reportes.liquidacion.historial')}
+                           style={{ background: 'rgba(99,102,241,0.15)', border: '2px solid rgba(99,102,241,0.5)', color: '#818cf8', padding: '0.5rem 1rem', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                            📋 Ver historial
+                        </a>
+                    </div>
+                )}
+
+                {/* Detalle instructor + resultados */}
                 {instructor && (
                     <>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1.5rem', marginBottom: '2rem', alignItems: 'start' }}>
                             <div style={boxStyle}>
                                 <h2 style={{ color: green, fontWeight: 900, margin: '0 0 1rem', fontSize: '1.5rem' }}>{instructor.name}</h2>
                                 <p style={{ color: '#999', margin: '0 0 0.5rem', fontSize: '0.875rem' }}>📧 {instructor.email}</p>
-                                <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
-                                    <div><span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tarifa por Clase</span><div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{fmt(tarifas.por_clase)}</div></div>
-                                    <div><span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tarifa por Asistente</span><div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{fmt(tarifas.por_asistente)}</div></div>
-                                    <div><span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Clases Finalizadas</span><div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{clases.length}</div></div>
+                                <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                                    <div>
+                                        <span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tarifa por Clase</span>
+                                        <div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{fmt(tarifas.por_clase)}</div>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Tarifa por Asistente</span>
+                                        <div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{fmt(tarifas.por_asistente)}</div>
+                                    </div>
+                                    <div>
+                                        <span style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1 }}>Clases Finalizadas</span>
+                                        <div style={{ color: green, fontWeight: 900, fontSize: '1.25rem' }}>{clases.length}</div>
+                                    </div>
                                 </div>
                             </div>
-                            <div style={{ ...boxStyle, textAlign: 'center', minWidth: 200 }}>
+                            <div style={{ ...boxStyle, textAlign: 'center', minWidth: 200, position: 'relative', border: yaPagado ? `2px solid rgba(34,197,94,0.6)` : `2px solid ${green}44` }}>
+                                {yaPagado && (
+                                    <div style={{ position: 'absolute', top: -12, right: 12, background: green, color: '#000', fontSize: '0.65rem', fontWeight: 900, padding: '0.2rem 0.65rem', borderRadius: 20, letterSpacing: 1 }}>
+                                        AL DÍA
+                                    </div>
+                                )}
                                 <div style={{ color: '#999', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 1, marginBottom: '0.5rem' }}>Total a Pagar</div>
                                 <div style={{ color: green, fontSize: '3rem', fontWeight: 900, textShadow: `0 0 20px ${green}80` }}>{fmt(totalPago)}</div>
                                 <div style={{ color: '#666', fontSize: '0.75rem', marginTop: '0.5rem' }}>COP</div>
@@ -282,7 +420,7 @@ export default function Liquidacion({ auth, instructor, clases, totalPago, tarif
                                 </thead>
                                 <tbody>
                                 {clases.length === 0 ? (
-                                    <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>No hay clases finalizadas en el período seleccionado</td></tr>
+                                    <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: '#666' }}>No hay clases finalizadas pendientes en este período</td></tr>
                                 ) : clases.map(c => (
                                     <tr key={c.id} style={{ borderBottom: `1px solid ${green}18` }}>
                                         <td style={{ padding: '1rem', color: '#ccc', fontSize: '0.875rem' }}>{formatDate(c.fecha_hora_inicio)}</td>

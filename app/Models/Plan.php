@@ -20,6 +20,9 @@ class Plan extends Model
         'precio',
         'descripcion',
         'activo',
+        'foto',
+        'color_fondo',
+        'beneficios',
     ];
 
     protected $casts = [
@@ -28,6 +31,7 @@ class Plan extends Model
         'activo'                => 'boolean',
         'precio'                => 'decimal:2',
         'clases_por_semana'     => 'integer',
+        'beneficios'            => 'array',
     ];
 
     public function clientePlanes()
