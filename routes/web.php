@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use App\Models\Clase;
 
 // Página de bienvenida
 Route::get('/', function () {
@@ -125,7 +127,21 @@ Route::middleware(['auth', 'role:instructor'])
         Route::get('/asistencias', [InstructorPortalController::class, 'asistencias'])->name('asistencias.index');
         Route::post('/asistencias', [InstructorPortalController::class, 'registrarAsistencia'])->name('asistencias.registrar');
         Route::delete('/asistencias/{asistencia}', [InstructorPortalController::class, 'eliminarAsistencia'])->name('asistencias.eliminar');
-        Route::get('/liquidacion', [InstructorPortalController::class, 'liquidacion'])->name('liquidacion.index');
+
+        Route::get('/liquidacion', function (Request $request, InstructorPortalController $controller) {
+            $ahora = now();
+
+            Clase::where('estado', 'programada')
+                ->where('fecha_hora_inicio', '<=', $ahora)
+                ->where('fecha_hora_fin', '>', $ahora)
+                ->update(['estado' => 'en_curso']);
+
+            Clase::whereIn('estado', ['programada', 'en_curso'])
+                ->where('fecha_hora_fin', '<=', $ahora)
+                ->update(['estado' => 'finalizada']);
+
+            return $controller->liquidacion($request);
+        })->name('liquidacion.index');
     });
 
 // Rutas de Cliente

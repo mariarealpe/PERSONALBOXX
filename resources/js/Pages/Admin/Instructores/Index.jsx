@@ -82,8 +82,15 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         formData.append('email', data.email);
         if (data.password) formData.append('password', data.password);
         if (data.especialidad) formData.append('especialidad', data.especialidad);
-        if (data.tarifa_por_clase) formData.append('tarifa_por_clase', data.tarifa_por_clase);
-        if (data.tarifa_por_asistente) formData.append('tarifa_por_asistente', data.tarifa_por_asistente);
+
+        // Enviar siempre tarifas si el campo existe (incluye "0")
+        if (data.tarifa_por_clase !== '' && data.tarifa_por_clase !== null && data.tarifa_por_clase !== undefined) {
+            formData.append('tarifa_por_clase', data.tarifa_por_clase);
+        }
+        if (data.tarifa_por_asistente !== '' && data.tarifa_por_asistente !== null && data.tarifa_por_asistente !== undefined) {
+            formData.append('tarifa_por_asistente', data.tarifa_por_asistente);
+        }
+
         if (data.biografia) formData.append('biografia', data.biografia);
         if (data.foto) formData.append('foto', data.foto);
         formData.append('activo', data.activo ? '1' : '0');

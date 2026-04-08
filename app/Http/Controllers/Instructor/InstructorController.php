@@ -23,6 +23,19 @@ class InstructorController extends Controller
         return $user->only(['id', 'name', 'email']) + ['foto_url' => $user->foto_url];
     }
 
+    private function toMoney($value): float
+    {
+        if ($value === null || $value === '') return 0.0;
+        if (is_numeric($value)) return (float) $value;
+
+        $v = str_replace(['$', ' '], '', (string) $value);
+        // Soporta "3.000,50" y "3000.50"
+        $v = str_replace('.', '', $v);
+        $v = str_replace(',', '.', $v);
+
+        return is_numeric($v) ? (float) $v : 0.0;
+    }
+
     // ── DASHBOARD ─────────────────────────────────────────────────────────────
     public function dashboard(Request $request)
     {
@@ -195,10 +208,10 @@ class InstructorController extends Controller
         $user       = $request->user();
         $instructor = $this->getInstructor($request);
 
-        $clases       = collect();
-        $totales      = null;
-        $periodoLabel = '';
-        $pagoRegistrado = null; // ← pago ya registrado para este período
+        $clases         = collect();
+        $totales        = null;
+        $periodoLabel   = '';
+        $pagoRegistrado = null;
 
         if ($request->hasAny(['fecha_inicio', 'fecha_fin'])) {
             $request->validate([
@@ -209,19 +222,38 @@ class InstructorController extends Controller
             $fechaInicio = Carbon::parse($request->fecha_inicio)->startOfDay();
             $fechaFin    = Carbon::parse($request->fecha_fin)->endOfDay();
 
+            $tarifaPorClase = $this->toMoney($instructor->tarifa_por_clase);
+            $tarifaPorAsistente = $this->toMoney($instructor->tarifa_por_asistente);
+
             $clases = Clase::with('tipoClase')
-                ->withCount('asistencias')
+                ->withCount(['asistencias', 'reservasConfirmadas'])
                 ->where('instructor_id', $user->id)
                 ->where('estado', 'finalizada')
                 ->whereBetween('fecha_hora_inicio', [$fechaInicio, $fechaFin])
                 ->orderBy('fecha_hora_inicio')
                 ->get()
-                ->map(function ($clase) use ($instructor) {
-                    $asistentes              = $clase->asistencias_count;
-                    $clase->pago             = $instructor->tarifa_por_asistente > 0
-                        ? $instructor->tarifa_por_asistente * $asistentes
-                        : $instructor->tarifa_por_clase;
+                ->map(function ($clase) use ($tarifaPorClase, $tarifaPorAsistente) {
+                    // Fallback para clases viejas:
+                    // - asistencias_count (nuevo)
+                    // - total_asistentes (si existe legacy)
+                    // - reservas_confirmadas_count (respaldo final)
+                    $asistenciasCount = (int) ($clase->asistencias_count ?? 0);
+                    $legacyTotal      = (int) ($clase->total_asistentes ?? 0);
+                    $reservasCount    = (int) ($clase->reservas_confirmadas_count ?? 0);
+
+                    $asistentes = max($asistenciasCount, $legacyTotal, $reservasCount);
+
+                    $base     = $tarifaPorClase > 0 ? $tarifaPorClase : 0;
+                    $variable = $tarifaPorAsistente > 0 ? ($asistentes * $tarifaPorAsistente) : 0;
+
                     $clase->total_asistentes = $asistentes;
+                    $clase->tarifa_por_clase_aplicada = $tarifaPorClase;
+                    $clase->tarifa_por_asistente_aplicada = $tarifaPorAsistente;
+                    $clase->tipo_tarifa_aplicada = ($tarifaPorClase > 0 && $tarifaPorAsistente > 0)
+                        ? 'mixta'
+                        : ($tarifaPorAsistente > 0 ? 'por_asistente' : 'por_clase');
+                    $clase->pago = $base + $variable;
+
                     return $clase;
                 });
 

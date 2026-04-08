@@ -151,9 +151,11 @@ class ReporteController extends Controller
 
         $totalPago = 0;
         foreach ($clases as $clase) {
-            $clase->pago = $tarifaPorAsistente > 0
-                ? $clase->asistencias_count * $tarifaPorAsistente
-                : $tarifaPorClase;
+            $base = $tarifaPorClase > 0 ? $tarifaPorClase : 0;
+            $variable = $tarifaPorAsistente > 0 ? ($clase->asistencias_count * $tarifaPorAsistente) : 0;
+
+            // Regla mixta: base + variable
+            $clase->pago = $base + $variable;
             $totalPago += $clase->pago;
         }
 

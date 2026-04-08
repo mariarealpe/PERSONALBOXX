@@ -44,18 +44,86 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
     const [fechaInicio, setFechaInicio] = useState(filters?.fecha_inicio ?? '');
     const [fechaFin, setFechaFin] = useState(filters?.fecha_fin ?? '');
 
-    const hasData = clases && clases.length > 0;
-    const tipoTarifa = instructor?.tarifa_por_asistente > 0 ? 'por_asistente' : 'por_clase';
+    const toNum = (v) => {
+        if (v === null || v === undefined || v === '') return 0;
+        if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+        const clean = String(v).replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
+        const n = Number(clean);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const tarifaPorClase = toNum(
+        instructor?.tarifa_por_clase
+        ?? instructor?.instructor?.tarifa_por_clase
+        ?? user?.instructor?.tarifa_por_clase
+        ?? 0
+    );
+
+    const tarifaPorAsistente = toNum(
+        instructor?.tarifa_por_asistente
+        ?? instructor?.instructor?.tarifa_por_asistente
+        ?? user?.instructor?.tarifa_por_asistente
+        ?? 0
+    );
+
+    const tipoTarifa =
+        tarifaPorClase > 0 && tarifaPorAsistente > 0
+            ? 'mixta'
+            : tarifaPorAsistente > 0
+                ? 'por_asistente'
+                : 'por_clase';
+
+    const asistentesClase = (c) =>
+        Number(c?.total_asistentes ?? c?.asistencias_count ?? c?.reservas_confirmadas_count ?? 0);
+
+    const tarifasClase = (c) => ({
+        porClase: toNum(c?.tarifa_por_clase_aplicada ?? tarifaPorClase),
+        porAsistente: toNum(c?.tarifa_por_asistente_aplicada ?? tarifaPorAsistente),
+    });
+
+    const tipoTarifaClase = (c) => {
+        if (c?.tipo_tarifa_aplicada) return c.tipo_tarifa_aplicada; // prioridad backend
+        const t = tarifasClase(c);
+        if (t.porClase > 0 && t.porAsistente > 0) return 'mixta';
+        if (t.porAsistente > 0) return 'por_asistente';
+        return 'por_clase';
+    };
+
+    const calcularPagoClase = (c) => {
+        if (c?.pago !== undefined && c?.pago !== null) return toNum(c.pago); // prioridad backend
+        const t = tarifasClase(c);
+        return (t.porClase > 0 ? t.porClase : 0) + (t.porAsistente > 0 ? asistentesClase(c) * t.porAsistente : 0);
+    };
+
+    const clasesFinalizadas = (clases ?? []).filter((c) => c?.estado === 'finalizada');
+
+    const clasesConPago = clasesFinalizadas.map((c) => ({
+        ...c,
+        _asistentesCalc: asistentesClase(c),
+        _tarifas: tarifasClase(c),
+        _tipoTarifa: tipoTarifaClase(c),
+        _pagoCalculado: calcularPagoClase(c),
+    }));
+
+    const totalPagoVista = clasesConPago.reduce((acc, c) => acc + c._pagoCalculado, 0);
+    const totalClasesVista = clasesConPago.length;
+    const totalAsistentesVista = clasesConPago.reduce((acc, c) => acc + c._asistentesCalc, 0);
+
+    const hasData = clasesConPago.length > 0;
     const yaPagado = !!pagoRegistrado;
 
     const calcular = () => {
         if (!fechaInicio || !fechaFin) return;
-        router.get('/instructor/liquidacion', { fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+        router.get(
+            '/instructor/liquidacion',
+            { fecha_inicio: fechaInicio, fecha_fin: fechaFin, _recalc: Date.now() },
+            { preserveState: false, replace: true }
+        );
     };
 
     const limpiar = () => {
         setFechaInicio(''); setFechaFin('');
-        router.get('/instructor/liquidacion', {});
+        router.get('/instructor/liquidacion', {}, { preserveState: false, replace: true });
     };
 
     const fmtCOP = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n ?? 0);
@@ -77,13 +145,15 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                     <div>
                         <p className="liq-name">{user.name}</p>
                         <p className="liq-muted">
-                            {tipoTarifa === 'por_asistente'
-                                ? `Tarifa por asistente: ${fmtCOP(instructor?.tarifa_por_asistente)} por persona`
-                                : `Tarifa fija por clase: ${fmtCOP(instructor?.tarifa_por_clase)}`}
+                            {tipoTarifa === 'mixta'
+                                ? `Tarifa mixta: ${fmtCOP(tarifaPorClase)} base + ${fmtCOP(tarifaPorAsistente)} por persona`
+                                : tipoTarifa === 'por_asistente'
+                                    ? `Tarifa por asistente: ${fmtCOP(tarifaPorAsistente)} por persona`
+                                    : `Tarifa fija por clase: ${fmtCOP(tarifaPorClase)}`}
                         </p>
                     </div>
-                    <div className={`liq-pill ${tipoTarifa === 'por_asistente' ? 'is-purple' : 'is-pink'}`}>
-                        {tipoTarifa === 'por_asistente' ? 'Por Asistente' : 'Tarifa Fija'}
+                    <div className={`liq-pill ${tipoTarifa === 'mixta' ? 'is-mix' : tipoTarifa === 'por_asistente' ? 'is-purple' : 'is-pink'}`}>
+                        {tipoTarifa === 'mixta' ? 'Tarifa Mixta' : tipoTarifa === 'por_asistente' ? 'Por Asistente' : 'Tarifa Fija'}
                     </div>
                 </div>
 
@@ -128,9 +198,9 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                     <>
                         <div className="liq-stats">
                             {[
-                                { label: 'Clases Dictadas', value: totales?.total_clases ?? 0, icon: Ico.calendar, color: '#3b82f6' },
-                                { label: 'Total Asistentes', value: totales?.total_asistentes ?? 0, icon: Ico.users, color: '#22c55e' },
-                                { label: 'Total a Pagar', value: fmtCOP(totales?.total_pago ?? 0), icon: Ico.money, color: '#FF1493', big: true },
+                                { label: 'Clases Dictadas', value: totalClasesVista, icon: Ico.calendar, color: '#3b82f6' },
+                                { label: 'Total Asistentes', value: totalAsistentesVista, icon: Ico.users, color: '#22c55e' },
+                                { label: 'Total a Pagar', value: fmtCOP(totalPagoVista), icon: Ico.money, color: '#FF1493', big: true },
                             ].map((s) => (
                                 <div key={s.label} className="liq-card liq-stat" style={{ '--c': s.color }}>
                                     <span className="liq-stat-ico">{s.icon}</span>
@@ -144,7 +214,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
 
                         <div className={`liq-card liq-table-wrap ${yaPagado ? 'is-paid' : ''}`}>
                             <div className="liq-table-head">
-                                <h3>Detalle por Clase · {periodoLabel}</h3>
+                                <h3>Detalle por Clase (solo finalizadas) · {periodoLabel}</h3>
                                 {yaPagado && <span className="liq-pill is-green">Período ya pagado</span>}
                             </div>
 
@@ -157,7 +227,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {clases.map((clase, i) => (
+                                    {clasesConPago.map((clase, i) => (
                                         <tr key={clase.id} className={i % 2 ? 'odd' : ''}>
                                             <td>{fmtFecha(clase.fecha_hora_inicio)}</td>
                                             <td>
@@ -168,20 +238,22 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                                             </td>
                                             <td>{hora(clase.fecha_hora_inicio)} – {hora(clase.fecha_hora_fin)}</td>
                                             <td>{clase.sala ?? '—'}</td>
-                                            <td className="center ok">{clase.total_asistentes}</td>
+                                            <td className="center ok">{clase._asistentesCalc}</td>
                                             <td>
-                                                {tipoTarifa === 'por_asistente'
-                                                    ? `${fmtCOP(instructor?.tarifa_por_asistente)} × ${clase.total_asistentes}`
-                                                    : `Fija: ${fmtCOP(instructor?.tarifa_por_clase)}`}
+                                                {clase._tipoTarifa === 'mixta'
+                                                    ? `${fmtCOP(clase._tarifas.porClase)} + (${fmtCOP(clase._tarifas.porAsistente)} × ${clase._asistentesCalc})`
+                                                    : clase._tipoTarifa === 'por_asistente'
+                                                        ? `${fmtCOP(clase._tarifas.porAsistente)} × ${clase._asistentesCalc}`
+                                                        : `Fija: ${fmtCOP(clase._tarifas.porClase)}`}
                                             </td>
-                                            <td className="pink strong">{fmtCOP(clase.pago)}</td>
+                                            <td className="pink strong">{fmtCOP(clase._pagoCalculado)}</td>
                                         </tr>
                                     ))}
                                     </tbody>
                                     <tfoot>
                                     <tr>
                                         <td colSpan="6" className="total-label">TOTAL A PAGAR</td>
-                                        <td className="total-val">{fmtCOP(totales?.total_pago)}</td>
+                                        <td className="total-val">{fmtCOP(totalPagoVista)}</td>
                                     </tr>
                                     </tfoot>
                                 </table>
@@ -190,7 +262,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                     </>
                 ) : (
                     <div className="liq-card liq-empty">
-                        <p>Selecciona un período para calcular tu liquidación.</p>
+                        <p>No hay clases finalizadas en el período seleccionado.</p>
                         <small>Solo se incluyen clases con estado <strong>finalizada</strong>.</small>
                     </div>
                 )}
@@ -208,6 +280,7 @@ export default function InstructorLiquidacion({ user, instructor, clases, totale
                 .liq-pill.is-purple{color:#9333ea;border-color:#9333ea;background:rgba(147,51,234,.12)}
                 .liq-pill.is-pink{color:#FF1493;border-color:#FF1493;background:rgba(255,20,147,.12)}
                 .liq-pill.is-green{color:#22c55e;border-color:#22c55e;background:rgba(34,197,94,.12)}
+                .liq-pill.is-mix{color:#06b6d4;border-color:#06b6d4;background:rgba(6,182,212,.12)}
 
                 .liq-filtros{padding:1rem;display:flex;gap:.8rem;align-items:flex-end;flex-wrap:wrap}
                 .liq-field{display:flex;flex-direction:column;gap:.45rem}

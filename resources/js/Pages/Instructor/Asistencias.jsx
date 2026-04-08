@@ -7,7 +7,7 @@
 // ────────────────────────────────────────────────────────────
 
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import InstructorLayout from '@/Layouts/InstructorLayout';
 
 const Ico = {
@@ -48,6 +48,12 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
     const [fecha, setFecha] = useState(filters?.fecha ?? new Date().toISOString().split('T')[0]);
     const [busqueda, setBusqueda] = useState('');
     const [flash, setFlash] = useState(null);
+    const [nowTs, setNowTs] = useState(Date.now());
+
+    useEffect(() => {
+        const id = setInterval(() => setNowTs(Date.now()), 30000);
+        return () => clearInterval(id);
+    }, []);
 
     const estadoConfig = {
         programada: { color: '#3b82f6', label: 'Programada' },
@@ -56,13 +62,37 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
         cancelada: { color: '#ef4444', label: 'Cancelada' },
     };
 
+    const getEstadoVisual = (clase) => {
+        const estadoDb = clase?.estado ?? 'programada';
+        if (estadoDb === 'cancelada' || estadoDb === 'finalizada') return estadoDb;
+
+        const ini = new Date(clase?.fecha_hora_inicio).getTime();
+        const fin = new Date(clase?.fecha_hora_fin).getTime();
+        if (Number.isNaN(ini) || Number.isNaN(fin)) return estadoDb;
+
+        if (nowTs >= fin) return 'finalizada';
+        if (nowTs >= ini && nowTs < fin) return 'en_curso';
+        return 'programada';
+    };
+
+    const clasesNormalizadas = useMemo(
+        () => (clases ?? []).map((c) => ({ ...c, estado_visual: getEstadoVisual(c) })),
+        [clases, nowTs]
+    );
+
+    const claseSeleccionadaVisual = useMemo(() => {
+        if (!claseSeleccionada) return null;
+        const enLista = clasesNormalizadas.find((c) => c.id === claseSeleccionada.id);
+        return enLista ?? { ...claseSeleccionada, estado_visual: getEstadoVisual(claseSeleccionada) };
+    }, [claseSeleccionada, clasesNormalizadas, nowTs]);
+
     const hora = (dt) => dt ? new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
 
     const seleccionarClase = (claseId) => router.get('/instructor/asistencias', { clase_id: claseId, fecha }, { preserveState: false });
     const cambiarFecha = (nuevaFecha) => { setFecha(nuevaFecha); router.get('/instructor/asistencias', { fecha: nuevaFecha }, { preserveState: false }); };
 
     const registrar = (clienteId) => {
-        router.post('/instructor/asistencias', { clase_id: claseSeleccionada?.id, cliente_id: clienteId }, {
+        router.post('/instructor/asistencias', { clase_id: claseSeleccionadaVisual?.id, cliente_id: clienteId }, {
             preserveState: true,
             onSuccess: () => { setFlash({ type: 'success', msg: 'Asistencia registrada' }); setTimeout(() => setFlash(null), 3000); },
             onError: (errors) => { setFlash({ type: 'error', msg: Object.values(errors)[0] ?? 'Error al registrar' }); setTimeout(() => setFlash(null), 3000); },
@@ -97,9 +127,9 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                 <div className="asis-grid">
                     <div className="asis-card asis-left">
                         <div className="asis-card-hd"><h3>Clases del día</h3></div>
-                        {clases?.length ? clases.map(clase => {
-                            const cfg = estadoConfig[clase.estado] ?? estadoConfig.programada;
-                            const activa = claseSeleccionada?.id === clase.id;
+                        {clasesNormalizadas?.length ? clasesNormalizadas.map(clase => {
+                            const cfg = estadoConfig[clase.estado_visual] ?? estadoConfig.programada;
+                            const activa = claseSeleccionadaVisual?.id === clase.id;
                             return (
                                 <button key={clase.id} onClick={() => seleccionarClase(clase.id)} className={`asis-class-item ${activa ? 'active' : ''}`}>
                                     <div className="asis-row">
@@ -117,12 +147,12 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                     </div>
 
                     <div>
-                        {claseSeleccionada ? (
+                        {claseSeleccionadaVisual ? (
                             <>
                                 <div className="asis-card asis-resumen">
                                     <div>
-                                        <h2>{claseSeleccionada.tipo_clase?.nombre}</h2>
-                                        <p><span className="asis-ico-sm">{Ico.clock}</span>{hora(claseSeleccionada.fecha_hora_inicio)} – {hora(claseSeleccionada.fecha_hora_fin)} · {claseSeleccionada.sala}</p>
+                                        <h2>{claseSeleccionadaVisual.tipo_clase?.nombre}</h2>
+                                        <p><span className="asis-ico-sm">{Ico.clock}</span>{hora(claseSeleccionadaVisual.fecha_hora_inicio)} – {hora(claseSeleccionadaVisual.fecha_hora_fin)} · {claseSeleccionadaVisual.sala}</p>
                                     </div>
                                     <div className="asis-kpis">
                                         <div><b className="ok">{asistencias?.length ?? 0}</b><span>Asistieron</span></div>
@@ -164,7 +194,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                                     {asistio ? (
                                                         <>
                                                             <span className="asis-ok-label"><span className="asis-ico-sm">{Ico.check}</span>Asistió</span>
-                                                            {claseSeleccionada.estado !== 'finalizada' && (
+                                                            {claseSeleccionadaVisual.estado_visual !== 'finalizada' && (
                                                                 <button onClick={() => eliminar(asistenciaObj?.id)} className="btn-danger">
                                                                     <span className="asis-ico-sm">{Ico.x}</span>Quitar
                                                                 </button>
@@ -173,7 +203,7 @@ export default function InstructorAsistencias({ user, clases, claseSeleccionada,
                                                     ) : (
                                                         <button
                                                             onClick={() => registrar(reserva.cliente_id)}
-                                                            disabled={claseSeleccionada.estado === 'finalizada' || claseSeleccionada.estado === 'cancelada'}
+                                                            disabled={claseSeleccionadaVisual.estado_visual === 'finalizada' || claseSeleccionadaVisual.estado_visual === 'cancelada'}
                                                             className="btn-success"
                                                         >
                                                             <span className="asis-ico-sm">{Ico.check}</span>Registrar

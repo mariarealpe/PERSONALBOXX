@@ -60,51 +60,74 @@ class LiquidacionHistorialController extends Controller
             'instructor_id'    => 'required|exists:users,id',
             'fecha_inicio'     => 'required|date',
             'fecha_fin'        => 'required|date|after_or_equal:fecha_inicio',
-            'total_clases'     => 'required|integer|min:0',
-            'total_asistentes' => 'required|integer|min:0',
-            'tipo_tarifa'      => 'required|string',
-            'tarifa_aplicada'  => 'required|numeric|min:0',
-            'total_pago'       => 'required|numeric|min:0',
             'fecha_pago'       => 'required|date',
             'notas'            => 'nullable|string|max:1000',
+            // Se reciben pero NO se confían desde frontend:
+            'total_clases'     => 'nullable',
+            'total_asistentes' => 'nullable',
+            'tipo_tarifa'      => 'nullable',
+            'tarifa_aplicada'  => 'nullable',
+            'total_pago'       => 'nullable',
         ]);
 
-        // El JSX envía instructor_id = users.id (ej: 23)
-        // La tabla `liquidaciones` guarda instructores.id (ej: 1) → hay que buscar el modelo
         $instructorModel = Instructor::where('user_id', $validated['instructor_id'])->firstOrFail();
 
         $fechaInicio = Carbon::parse($validated['fecha_inicio'])->startOfDay();
         $fechaFin    = Carbon::parse($validated['fecha_fin'])->endOfDay();
 
-        DB::transaction(function () use ($validated, $instructorModel, $fechaInicio, $fechaFin) {
+        $clasesLiquidables = Clase::where('instructor_id', $validated['instructor_id']) // users.id
+            ->where('estado', 'finalizada')
+            ->whereBetween('fecha_hora_inicio', [$fechaInicio, $fechaFin])
+            ->withCount('asistencias')
+            ->get();
 
-            // ── PASO 1: Guardar registro de liquidación ────────────────────
+        if ($clasesLiquidables->isEmpty()) {
+            return back()->withErrors([
+                'liquidacion' => 'No hay clases finalizadas para liquidar en ese período.',
+            ]);
+        }
+
+        $tarifaPorClase = (float) ($instructorModel->tarifa_por_clase ?? 0);
+        $tarifaPorAsistente = (float) ($instructorModel->tarifa_por_asistente ?? 0);
+
+        $tipoTarifa = $tarifaPorClase > 0 && $tarifaPorAsistente > 0
+            ? 'mixta'
+            : ($tarifaPorAsistente > 0 ? 'por_asistente' : 'por_clase');
+
+        $totalClases = $clasesLiquidables->count();
+        $totalAsistentes = (int) $clasesLiquidables->sum('asistencias_count');
+        $totalPago = (float) $clasesLiquidables->sum(function ($clase) use ($tarifaPorClase, $tarifaPorAsistente) {
+            return ($tarifaPorClase > 0 ? $tarifaPorClase : 0)
+                + ($tarifaPorAsistente > 0 ? ((int) $clase->asistencias_count * $tarifaPorAsistente) : 0);
+        });
+
+        $tarifaAplicada = $tipoTarifa === 'por_asistente' ? $tarifaPorAsistente : $tarifaPorClase;
+
+        DB::transaction(function () use (
+            $validated,
+            $instructorModel,
+            $clasesLiquidables,
+            $totalClases,
+            $totalAsistentes,
+            $tipoTarifa,
+            $tarifaAplicada,
+            $totalPago
+        ) {
             Liquidacion::create([
-                'instructor_id'    => $instructorModel->id,   // instructores.id
+                'instructor_id'    => $instructorModel->id,
                 'aprobado_por'     => Auth::id(),
                 'fecha_inicio'     => $validated['fecha_inicio'],
                 'fecha_fin'        => $validated['fecha_fin'],
-                'total_clases'     => $validated['total_clases'],
-                'total_asistentes' => $validated['total_asistentes'],
-                'tipo_tarifa'      => $validated['tipo_tarifa'],
-                'tarifa_aplicada'  => $validated['tarifa_aplicada'],
-                'total_pago'       => $validated['total_pago'],
+                'total_clases'     => $totalClases,
+                'total_asistentes' => $totalAsistentes,
+                'tipo_tarifa'      => $tipoTarifa,
+                'tarifa_aplicada'  => $tarifaAplicada,
+                'total_pago'       => $totalPago,
                 'fecha_pago'       => $validated['fecha_pago'],
                 'notas'            => $validated['notas'] ?? null,
             ]);
 
-            // ── PASO 2: Eliminar clases finalizadas del instructor en el período ──
-            //
-            // En la tabla `clases`, instructor_id = users.id (no instructores.id).
-            // Por eso usamos $validated['instructor_id'] directamente aquí.
-            //
-            // Las asistencias y reservas vinculadas a estas clases se eliminan
-            // automáticamente gracias a:
-            //   FOREIGN KEY (clase_id) REFERENCES clases(id) ON DELETE CASCADE
-            Clase::where('instructor_id', $validated['instructor_id'])
-                ->where('estado', 'finalizada')
-                ->whereBetween('fecha_hora_inicio', [$fechaInicio, $fechaFin])
-                ->delete();
+            Clase::whereIn('id', $clasesLiquidables->pluck('id'))->delete();
         });
 
         return redirect()
@@ -113,7 +136,7 @@ class LiquidacionHistorialController extends Controller
                 'fecha_inicio'  => $validated['fecha_inicio'],
                 'fecha_fin'     => $validated['fecha_fin'],
             ])
-            ->with('success', '✅ Pago registrado. Las clases liquidadas fueron eliminadas.');
+            ->with('success', '✅ Pago registrado. Se liquidaron y eliminaron las clases finalizadas del período.');
     }
 
     /**

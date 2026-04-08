@@ -223,6 +223,12 @@ function NeonSelect({ value, onChange, options, placeholder = 'Todos' }) {
 export default function InstructorClases({ user, clases, filters }) {
     const [fecha,  setFecha]  = useState(filters?.fecha  ?? '');
     const [estado, setEstado] = useState(filters?.estado ?? '');
+    const [nowTs, setNowTs] = useState(Date.now());
+
+    useEffect(() => {
+        const id = setInterval(() => setNowTs(Date.now()), 30000);
+        return () => clearInterval(id);
+    }, []);
 
     const estadoConfig = {
         programada: { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  label: 'Programada' },
@@ -230,6 +236,24 @@ export default function InstructorClases({ user, clases, filters }) {
         finalizada: { color: '#6b7280', bg: 'rgba(107,114,128,0.1)', label: 'Finalizada' },
         cancelada:  { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Cancelada'  },
     };
+
+    const getEstadoVisual = (clase) => {
+        const estadoDb = clase?.estado ?? 'programada';
+        if (estadoDb === 'cancelada' || estadoDb === 'finalizada') return estadoDb;
+
+        const ini = new Date(clase?.fecha_hora_inicio).getTime();
+        const fin = new Date(clase?.fecha_hora_fin).getTime();
+        if (Number.isNaN(ini) || Number.isNaN(fin)) return estadoDb;
+
+        if (nowTs >= fin) return 'finalizada';
+        if (nowTs >= ini && nowTs < fin) return 'en_curso';
+        return 'programada';
+    };
+
+    const clasesNormalizadas = useMemo(
+        () => (clases?.data ?? []).map((c) => ({ ...c, estado_visual: getEstadoVisual(c) })),
+        [clases?.data, nowTs]
+    );
 
     const buscar  = () => router.get('/instructor/clases', { fecha, estado }, { preserveState: true });
     const fmtFecha = (dt) => dt ? new Date(dt).toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -247,7 +271,7 @@ export default function InstructorClases({ user, clases, filters }) {
 
     const clasesMap = useMemo(() => {
         const m = {};
-        (clases?.data ?? []).forEach(c => {
+        clasesNormalizadas.forEach(c => {
             if (!c.fecha_hora_inicio) return;
             const ymd = new Date(c.fecha_hora_inicio);
             const key = toYMD(ymd);
@@ -255,7 +279,7 @@ export default function InstructorClases({ user, clases, filters }) {
             m[key].push(c);
         });
         return m;
-    }, [clases?.data]);
+    }, [clasesNormalizadas]);
 
     const handleSelectDate = (d) => {
         setSelectedDate(d);
@@ -337,7 +361,7 @@ export default function InstructorClases({ user, clases, filters }) {
                 </div>
 
                 <div className="itable-card">
-                    {clases.data && clases.data.length > 0 ? (
+                    {clasesNormalizadas.length > 0 ? (
                         <>
                             <div className="itable-desktop" style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -349,8 +373,8 @@ export default function InstructorClases({ user, clases, filters }) {
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    {clases.data.map((clase, i) => {
-                                        const cfg = estadoConfig[clase.estado] ?? estadoConfig.programada;
+                                    {clasesNormalizadas.map((clase, i) => {
+                                        const cfg = estadoConfig[clase.estado_visual] ?? estadoConfig.programada;
                                         return (
                                             <tr key={clase.id} style={{ borderBottom: '1px solid rgba(255,20,147,0.1)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,20,147,0.02)' }}>
                                                 <td style={{ padding: '1rem 1.25rem', color: '#fff', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>{fmtFecha(clase.fecha_hora_inicio)}</td>
@@ -371,7 +395,7 @@ export default function InstructorClases({ user, clases, filters }) {
                                                     <span style={{ background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.color}`, borderRadius: 20, padding: '0.25rem 0.75rem', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{cfg.label}</span>
                                                 </td>
                                                 <td style={{ padding: '1rem 1.25rem' }}>
-                                                    {(clase.estado === 'programada' || clase.estado === 'en_curso') && (
+                                                    {(clase.estado_visual === 'programada' || clase.estado_visual === 'en_curso') && (
                                                         <Link href={`/instructor/asistencias?clase_id=${clase.id}`} style={{ background: 'rgba(255,20,147,0.15)', border: '1px solid #FF1493', color: '#FF1493', borderRadius: 6, padding: '0.375rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>✅ Asistencia</Link>
                                                     )}
                                                 </td>
@@ -383,8 +407,8 @@ export default function InstructorClases({ user, clases, filters }) {
                             </div>
 
                             <div className="itable-mobile">
-                                {clases.data.map((clase) => {
-                                    const cfg = estadoConfig[clase.estado] ?? estadoConfig.programada;
+                                {clasesNormalizadas.map((clase) => {
+                                    const cfg = estadoConfig[clase.estado_visual] ?? estadoConfig.programada;
                                     return (
                                         <div key={`m-${clase.id}`} className="mclass">
                                             <div className="mclass-row">
@@ -405,7 +429,7 @@ export default function InstructorClases({ user, clases, filters }) {
                                                 <span>Reservas: {clase.total_reservas ?? 0}/{clase.capacidad_maxima}</span>
                                                 <span>Asistencias: {clase.asistencias_count ?? 0}</span>
                                             </div>
-                                            {(clase.estado === 'programada' || clase.estado === 'en_curso') && (
+                                            {(clase.estado_visual === 'programada' || clase.estado_visual === 'en_curso') && (
                                                 <div style={{ marginTop: '0.6rem' }}>
                                                     <Link
                                                         href={`/instructor/asistencias?clase_id=${clase.id}`}

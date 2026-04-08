@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
 import InstructorLayout from '@/Layouts/InstructorLayout';
 
 const Ico = {
@@ -23,12 +24,37 @@ function StatCard({ icon, label, value }) {
 }
 
 export default function InstructorDashboard({ user, stats, clasesHoy }) {
+    const [nowTs, setNowTs] = useState(Date.now());
+
+    useEffect(() => {
+        const id = setInterval(() => setNowTs(Date.now()), 30000);
+        return () => clearInterval(id);
+    }, []);
+
     const estadoConfig = {
         programada: { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',  label: 'Programada' },
         en_curso:   { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',   label: 'En Curso'   },
         finalizada: { color: '#6b7280', bg: 'rgba(107,114,128,0.1)', label: 'Finalizada' },
         cancelada:  { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   label: 'Cancelada'  },
     };
+
+    const getEstadoVisual = (clase) => {
+        const estadoDb = clase?.estado ?? 'programada';
+        if (estadoDb === 'cancelada' || estadoDb === 'finalizada') return estadoDb;
+
+        const ini = new Date(clase?.fecha_hora_inicio).getTime();
+        const fin = new Date(clase?.fecha_hora_fin).getTime();
+        if (Number.isNaN(ini) || Number.isNaN(fin)) return estadoDb;
+
+        if (nowTs >= fin) return 'finalizada';
+        if (nowTs >= ini && nowTs < fin) return 'en_curso';
+        return 'programada';
+    };
+
+    const clasesHoyNormalizadas = useMemo(
+        () => (clasesHoy ?? []).map((c) => ({ ...c, estado_visual: getEstadoVisual(c) })),
+        [clasesHoy, nowTs]
+    );
 
     const fmt  = (n)  => new Intl.NumberFormat('es-CO').format(n ?? 0);
     const hora = (dt) => dt ? new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
@@ -49,7 +75,6 @@ export default function InstructorDashboard({ user, stats, clasesHoy }) {
     return (
         <InstructorLayout user={user}>
             <Head title="Dashboard Instructor" />
-
             <div className="ins-wrap">
                 <div className="ins-welcome">
                     <h1 className="ins-title">¡Hola, {user.name}!</h1>
@@ -62,10 +87,10 @@ export default function InstructorDashboard({ user, stats, clasesHoy }) {
 
                 <div className="ins-section">
                     <h2 className="ins-section-title">Mis Clases de Hoy</h2>
-                    {clasesHoy?.length ? (
+                    {clasesHoyNormalizadas?.length ? (
                         <div className="ins-classes-grid">
-                            {clasesHoy.map((clase) => {
-                                const cfg = estadoConfig[clase.estado] ?? estadoConfig.programada;
+                            {clasesHoyNormalizadas.map((clase) => {
+                                const cfg = estadoConfig[clase.estado_visual] ?? estadoConfig.programada;
                                 return (
                                     <div key={clase.id} className="ins-class-card">
                                         <div className="ins-class-main">
@@ -90,7 +115,7 @@ export default function InstructorDashboard({ user, stats, clasesHoy }) {
                                             <span className="ins-status" style={{ background: cfg.bg, color: cfg.color, borderColor: cfg.color }}>
                                                 {cfg.label}
                                             </span>
-                                            {(clase.estado === 'programada' || clase.estado === 'en_curso') && (
+                                            {(clase.estado_visual === 'programada' || clase.estado_visual === 'en_curso') && (
                                                 <Link href={`/instructor/asistencias?clase_id=${clase.id}`} className="ins-btn-primary">
                                                     <span className="ins-btn-icon">{Ico.check}</span>
                                                     Asistencia
