@@ -32,6 +32,15 @@ export default function Login({ status, canResetPassword }) {
             <div className="login-container">
                 {/* Fondo con efecto neón */}
                 <div className="neon-background"></div>
+                <div className="grid-overlay"></div>
+
+                {/* Partículas */}
+                <div className="particles">
+                    <div className="particle p1"></div>
+                    <div className="particle p2"></div>
+                    <div className="particle p3"></div>
+                    <div className="particle p4"></div>
+                </div>
 
                 {/* Logo y título */}
                 <div className="login-header">
@@ -56,13 +65,16 @@ export default function Login({ status, canResetPassword }) {
 
                 {/* Mensaje de estado */}
                 {status && (
-                    <div className="status-message">
+                    <div className="status-message" role="status" aria-live="polite">
                         {status}
                     </div>
                 )}
 
-                {/* Formulario */}
+                {/* Formulario — glassmorphism */}
                 <form onSubmit={submit} className="login-form">
+                    {/* Brillo interno superior */}
+                    <div className="form-glass-shine"></div>
+
                     <h2 className="form-title">INICIAR SESIÓN</h2>
 
                     {/* Email */}
@@ -119,8 +131,8 @@ export default function Login({ status, canResetPassword }) {
                         )}
                     </div>
 
-                    {/* Botón de login */}
-                    <PrimaryButton className="login-button" disabled={processing}>
+                    {/* Botón de login — glassmorphism + neon */}
+                    <PrimaryButton className="login-button" disabled={processing} aria-label="Entrar">
                         {processing ? 'INICIANDO...' : 'ENTRAR'}
                     </PrimaryButton>
                 </form>
@@ -128,12 +140,11 @@ export default function Login({ status, canResetPassword }) {
                 {/* Footer */}
                 <div className="login-footer">
                     <p className="footer-text">ARMENIA, QUINDÍO</p>
-                    <p className="footer-phone">📱 3102973508</p>
                 </div>
             </div>
 
-            <style jsx>{`
-                * {
+            <style>{`
+                *, *::before, *::after {
                     margin: 0;
                     padding: 0;
                     box-sizing: border-box;
@@ -146,33 +157,67 @@ export default function Login({ status, canResetPassword }) {
                     justify-content: center;
                     align-items: center;
                     background: #000000;
-                    padding: 2rem;
+                    padding: 2rem 1.25rem;
                     position: relative;
                     overflow: hidden;
                 }
 
+                /* ── Fondo ── */
                 .neon-background {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
+                    position: fixed;
+                    inset: 0;
                     background:
-                        radial-gradient(circle at 20% 50%, rgba(255, 20, 147, 0.15) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(255, 20, 147, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 20%, rgba(255, 20, 147, 0.08) 0%, transparent 50%);
+                        radial-gradient(ellipse 70% 60% at 20% 50%, rgba(255,20,147,0.18) 0%, transparent 55%),
+                        radial-gradient(ellipse 50% 70% at 80% 80%, rgba(255,20,147,0.12) 0%, transparent 55%),
+                        radial-gradient(ellipse 40% 40% at 50% 10%, rgba(255,20,147,0.08) 0%, transparent 55%);
                     animation: glow-pulse 8s ease-in-out infinite;
                     pointer-events: none;
+                    z-index: 0;
+                }
+
+                .grid-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background-image:
+                        linear-gradient(rgba(255,20,147,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,20,147,0.03) 1px, transparent 1px);
+                    background-size: 60px 60px;
+                    pointer-events: none;
+                    z-index: 0;
                 }
 
                 @keyframes glow-pulse {
                     0%, 100% { opacity: 0.5; }
-                    50% { opacity: 1; }
+                    50%       { opacity: 1; }
                 }
 
+                /* ── Partículas ── */
+                .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+                .particle {
+                    position: absolute;
+                    width: 3px;
+                    height: 3px;
+                    border-radius: 50%;
+                    background: #FF1493;
+                    animation: floatUp 9s ease-in-out infinite;
+                    box-shadow: 0 0 6px #FF1493, 0 0 12px #FF1493;
+                }
+                .p1 { left: 8%;  animation-delay: 0s;   animation-duration: 9s; }
+                .p2 { left: 35%; animation-delay: 2s;   animation-duration: 7s; }
+                .p3 { left: 65%; animation-delay: 1s;   animation-duration: 11s; }
+                .p4 { left: 88%; animation-delay: 3.5s; animation-duration: 8s; }
+
+                @keyframes floatUp {
+                    0%   { transform: translateY(110vh); opacity: 0; }
+                    10%  { opacity: 1; }
+                    90%  { opacity: 1; }
+                    100% { transform: translateY(-10vh); opacity: 0; }
+                }
+
+                /* ── Header ── */
                 .login-header {
                     text-align: center;
-                    margin-bottom: 3rem;
+                    margin-bottom: 2.5rem;
                     z-index: 1;
                 }
 
@@ -180,15 +225,15 @@ export default function Login({ status, canResetPassword }) {
                     position: relative;
                     width: 100px;
                     height: 100px;
-                    margin: 0 auto 2rem;
+                    margin: 0 auto 1.75rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                 }
 
                 .logo-icon {
-                    width: 60px;
-                    height: 60px;
+                    width: 56px;
+                    height: 56px;
                     color: #FF1493;
                     filter: drop-shadow(0 0 20px #FF1493) drop-shadow(0 0 40px #FF1493);
                     animation: heartbeat 2s ease-in-out infinite;
@@ -227,42 +272,35 @@ export default function Login({ status, canResetPassword }) {
                     border-radius: 4px;
                     box-shadow:
                         0 0 10px #FF1493,
-                        0 0 20px rgba(255, 20, 147, 0.5),
-                        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+                        0 0 20px rgba(255,20,147,0.5),
+                        inset 0 2px 4px rgba(255,255,255,0.2);
                     position: relative;
                 }
 
                 .weight-left::before, .weight-right::before {
                     content: '';
                     position: absolute;
-                    top: 50%;
-                    left: 50%;
+                    top: 50%; left: 50%;
                     transform: translate(-50%, -50%);
-                    width: 15px;
-                    height: 15px;
+                    width: 14px;
+                    height: 14px;
                     border-radius: 50%;
-                    background: rgba(0, 0, 0, 0.3);
+                    background: rgba(0,0,0,0.3);
                 }
 
-                .weight-left {
-                    transform: rotate(-10deg);
-                }
-
-                .weight-right {
-                    transform: rotate(10deg);
-                }
+                .weight-left  { transform: rotate(-10deg); }
+                .weight-right { transform: rotate(10deg); }
 
                 .brand-name {
-                    font-size: 3.5rem;
+                    font-size: clamp(2rem, 8vw, 3.5rem);
                     font-weight: 900;
                     color: #FF1493;
                     text-transform: uppercase;
-                    letter-spacing: 8px;
+                    letter-spacing: clamp(4px, 2vw, 8px);
                     margin: 0 0 0.5rem 0;
                     text-shadow:
                         0 0 10px #FF1493,
                         0 0 20px #FF1493,
-                        0 0 30px #FF1493,
                         0 0 40px #FF1493;
                     animation: neon-flicker 3s ease-in-out infinite alternate;
                 }
@@ -272,78 +310,94 @@ export default function Login({ status, canResetPassword }) {
                         text-shadow:
                             0 0 10px #FF1493,
                             0 0 20px #FF1493,
-                            0 0 30px #FF1493,
                             0 0 40px #FF1493;
                     }
-                    20%, 24%, 55% {
-                        text-shadow: none;
-                    }
+                    20%, 24%, 55% { text-shadow: none; }
                 }
 
                 .brand-subtitle {
-                    font-size: 0.75rem;
-                    color: #999;
-                    letter-spacing: 4px;
+                    font-size: 0.72rem;
+                    color: #888;
+                    letter-spacing: 3px;
                     font-weight: 600;
                 }
 
                 .status-message {
-                    background: rgba(34, 197, 94, 0.15);
-                    border: 1px solid #22c55e;
+                    background: rgba(34,197,94,0.12);
+                    border: 1px solid rgba(34,197,94,0.4);
                     color: #22c55e;
                     padding: 0.75rem 1.5rem;
-                    border-radius: 8px;
-                    margin-bottom: 2rem;
+                    border-radius: 10px;
+                    margin-bottom: 1.5rem;
                     font-size: 0.875rem;
                     z-index: 1;
-                    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
-                }
-
-                .login-form {
-                    background: rgba(10, 10, 10, 0.95);
-                    backdrop-filter: blur(10px);
-                    border: 2px solid #FF1493;
-                    padding: 3rem 2.5rem;
-                    border-radius: 12px;
-                    box-shadow:
-                        0 0 20px rgba(255, 20, 147, 0.5),
-                        0 0 40px rgba(255, 20, 147, 0.3),
-                        inset 0 0 60px rgba(255, 20, 147, 0.05);
                     width: 100%;
-                    max-width: 450px;
-                    z-index: 1;
-                    position: relative;
+                    max-width: 440px;
+                    text-align: center;
                 }
 
-                .login-form::before {
-                    content: '';
+                /* ── Formulario — glassmorphism ── */
+                .login-form {
+                    position: relative;
+                    width: 100%;
+                    max-width: 440px;
+                    z-index: 1;
+                    padding: 2.75rem 2.25rem;
+                    border-radius: 20px;
+                    overflow: hidden;
+
+                    /* glass base */
+                    background: rgba(255, 255, 255, 0.04);
+                    backdrop-filter: blur(28px);
+                    -webkit-backdrop-filter: blur(28px);
+
+                    /* bordes glass + neon */
+                    border: 1px solid rgba(255, 255, 255, 0.09);
+                    border-top: 1px solid rgba(255, 255, 255, 0.18);
+
+                    /* sombras: profundidad + neon glow */
+                    box-shadow:
+                        0 0 0 1px rgba(255, 20, 147, 0.12),
+                        0 0 40px rgba(255, 20, 147, 0.18),
+                        0 0 80px rgba(255, 20, 147, 0.06),
+                        0 16px 48px rgba(0, 0, 0, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+                }
+
+                /* Brillo diagonal superior (efecto cristal) */
+                .form-glass-shine {
                     position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 3px;
-                    background: linear-gradient(90deg, transparent, #FF1493, transparent);
-                    box-shadow: 0 0 10px #FF1493;
+                    top: 0; left: 0; right: 0;
+                    height: 2px;
+                    background: linear-gradient(
+                        90deg,
+                        transparent 0%,
+                        rgba(255,255,255,0.15) 30%,
+                        rgba(255,20,147,0.6) 50%,
+                        rgba(255,255,255,0.15) 70%,
+                        transparent 100%
+                    );
+                    box-shadow: 0 0 12px rgba(255,20,147,0.5);
                 }
 
                 .form-title {
                     color: #FF1493;
-                    font-size: 1.5rem;
+                    font-size: 1.35rem;
                     font-weight: 900;
                     text-align: center;
                     margin-bottom: 2rem;
                     letter-spacing: 3px;
-                    text-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
+                    text-shadow: 0 0 12px rgba(255,20,147,0.5);
                 }
 
                 .form-group {
-                    margin-bottom: 1.5rem;
+                    margin-bottom: 1.4rem;
                 }
 
                 .form-label {
                     display: block;
-                    color: #FF1493;
-                    font-size: 0.75rem;
+                    color: rgba(255,20,147,0.85);
+                    font-size: 0.7rem;
                     font-weight: 700;
                     margin-bottom: 0.5rem;
                     letter-spacing: 2px;
@@ -352,43 +406,45 @@ export default function Login({ status, canResetPassword }) {
 
                 .form-input {
                     width: 100%;
-                    padding: 1rem;
-                    background: #000000;
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 8px;
+                    padding: 0.9rem 1rem;
+                    background: rgba(0, 0, 0, 0.45);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-bottom: 1px solid rgba(255,20,147,0.25);
+                    border-radius: 10px;
                     color: #fff;
-                    font-size: 1rem;
+                    font-size: 0.95rem;
                     transition: all 0.3s ease;
                     font-family: inherit;
                 }
 
                 .form-input:focus {
                     outline: none;
-                    border-color: #FF1493;
+                    border-color: rgba(255,20,147,0.7);
+                    border-bottom-color: #FF1493;
+                    background: rgba(0,0,0,0.6);
                     box-shadow:
-                        0 0 10px rgba(255, 20, 147, 0.5),
-                        0 0 20px rgba(255, 20, 147, 0.3);
-                    background: #0a0a0a;
+                        0 0 0 1px rgba(255,20,147,0.2),
+                        0 0 16px rgba(255,20,147,0.2);
                 }
 
-                .form-input::placeholder {
-                    color: #555;
-                }
+                .form-input::placeholder { color: #444; }
 
                 .error-message {
                     color: #ef4444;
-                    font-size: 0.75rem;
-                    margin-top: 0.5rem;
-                    text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+                    font-size: 0.72rem;
+                    margin-top: 0.4rem;
+                    text-shadow: 0 0 5px rgba(239,68,68,0.4);
                 }
 
                 .form-group-checkbox {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    margin-bottom: 2rem;
+                    margin-bottom: 1.75rem;
                     flex-wrap: wrap;
-                    gap: 1rem;
+                    gap: 0.75rem;
                 }
 
                 .checkbox-label {
@@ -399,112 +455,161 @@ export default function Login({ status, canResetPassword }) {
                 }
 
                 .checkbox-text {
-                    color: #999;
-                    font-size: 0.875rem;
+                    color: #777;
+                    font-size: 0.85rem;
                 }
 
                 .forgot-password-link {
-                    color: #FF1493;
-                    font-size: 0.875rem;
+                    color: rgba(255,20,147,0.8);
+                    font-size: 0.82rem;
                     text-decoration: none;
                     transition: all 0.2s;
                     font-weight: 600;
                 }
 
                 .forgot-password-link:hover {
-                    color: #FF69B4;
-                    text-shadow: 0 0 5px rgba(255, 20, 147, 0.5);
+                    color: #FF1493;
+                    text-shadow: 0 0 8px rgba(255,20,147,0.5);
                 }
 
+                /* ── Botón login — glassmorphism + neon ── */
                 .login-button {
                     width: 100%;
-                    padding: 1.125rem;
-                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
-                    color: #000;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 1rem;
+                    padding: 1rem;
+                    border-radius: 12px;
+                    font-size: 0.95rem;
                     font-weight: 900;
                     text-transform: uppercase;
                     letter-spacing: 2px;
                     cursor: pointer;
-                    transition: all 0.3s ease;
-                    box-shadow:
-                        0 4px 15px rgba(255, 20, 147, 0.4),
-                        0 0 20px rgba(255, 20, 147, 0.3);
+                    transition: all 0.35s ease;
                     position: relative;
                     overflow: hidden;
+
+                    /* glass + neon */
+                    background: rgba(255, 20, 147, 0.15);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-top: 1px solid rgba(255, 255, 255, 0.22);
+                    color: #FF1493;
+                    box-shadow:
+                        0 0 20px rgba(255, 20, 147, 0.25),
+                        0 0 40px rgba(255, 20, 147, 0.08),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                        inset 0 -1px 0 rgba(255, 20, 147, 0.15);
                 }
 
+                /* Shimmer animado sobre el botón */
                 .login-button::before {
                     content: '';
                     position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    width: 0;
-                    height: 0;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, 0.3);
-                    transform: translate(-50%, -50%);
-                    transition: width 0.6s, height 0.6s;
+                    top: 0; left: -100%;
+                    width: 60%;
+                    height: 100%;
+                    background: linear-gradient(
+                        120deg,
+                        transparent 0%,
+                        rgba(255,255,255,0.08) 50%,
+                        transparent 100%
+                    );
+                    transition: left 0.6s ease;
                 }
 
                 .login-button:hover:not(:disabled)::before {
-                    width: 300px;
-                    height: 300px;
+                    left: 160%;
                 }
 
                 .login-button:hover:not(:disabled) {
-                    transform: translateY(-3px);
+                    background: rgba(255, 20, 147, 0.28);
+                    border-color: rgba(255, 255, 255, 0.2);
+                    color: #fff;
+                    transform: translateY(-2px);
                     box-shadow:
-                        0 6px 25px rgba(255, 20, 147, 0.6),
-                        0 0 30px rgba(255, 20, 147, 0.4);
+                        0 0 30px rgba(255, 20, 147, 0.5),
+                        0 0 60px rgba(255, 20, 147, 0.2),
+                        0 8px 24px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+                }
+
+                .login-button:active:not(:disabled) {
+                    transform: translateY(0);
                 }
 
                 .login-button:disabled {
-                    opacity: 0.5;
+                    opacity: 0.4;
                     cursor: not-allowed;
                 }
 
+                /* ── Footer ── */
                 .login-footer {
-                    margin-top: 3rem;
+                    margin-top: 2.5rem;
                     text-align: center;
                     z-index: 1;
                 }
 
                 .footer-text {
-                    color: #666;
-                    font-size: 0.875rem;
+                    color: #555;
+                    font-size: 0.8rem;
                     font-weight: 700;
                     letter-spacing: 2px;
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 0.35rem;
                 }
 
                 .footer-phone {
-                    color: #FF1493;
-                    font-size: 1rem;
+                    color: rgba(255,20,147,0.7);
+                    font-size: 0.9rem;
                     font-weight: 700;
-                    text-shadow: 0 0 5px rgba(255, 20, 147, 0.5);
+                    letter-spacing: 1px;
                 }
 
-                @media (max-width: 640px) {
+                /* ── Responsive — tablet ── */
+                @media (max-width: 768px) {
+                    .login-container { padding: 1.75rem 1.25rem; }
+                    .login-form { padding: 2.25rem 1.75rem; border-radius: 18px; }
+                    .logo-container { width: 90px; height: 90px; }
+                    .logo-icon { width: 50px; height: 50px; }
+                    .logo-bar { width: 70px; }
+                    .logo-weights { width: 108px; }
+                    .weight-left, .weight-right { width: 22px; height: 36px; }
+                }
+
+                /* ── Responsive — móvil ── */
+                @media (max-width: 480px) {
+                    .login-container { padding: 1.5rem 1rem; justify-content: flex-start; padding-top: 2rem; }
+                    .login-header { margin-bottom: 1.75rem; }
+                    .logo-container { width: 80px; height: 80px; margin-bottom: 1.25rem; }
+                    .logo-icon { width: 44px; height: 44px; }
+                    .logo-bar { width: 62px; height: 5px; }
+                    .logo-weights { width: 96px; }
+                    .weight-left, .weight-right { width: 20px; height: 32px; }
+                    .brand-name { letter-spacing: 4px; }
+                    .brand-subtitle { font-size: 0.6rem; letter-spacing: 2px; }
                     .login-form {
-                        padding: 2rem 1.5rem;
+                        padding: 2rem 1.25rem;
+                        border-radius: 16px;
+                        max-width: 100%;
                     }
+                    .form-title { font-size: 1.15rem; letter-spacing: 2px; margin-bottom: 1.5rem; }
+                    .form-group { margin-bottom: 1.1rem; }
+                    .form-input { padding: 0.8rem 0.875rem; font-size: 0.9rem; }
+                    .form-group-checkbox { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+                    .login-button { padding: 0.875rem; font-size: 0.875rem; letter-spacing: 1.5px; }
+                    .login-footer { margin-top: 1.75rem; }
+                    .footer-text { font-size: 0.72rem; letter-spacing: 1.5px; }
+                    .footer-phone { font-size: 0.82rem; }
+                }
 
-                    .brand-name {
-                        font-size: 2.5rem;
-                        letter-spacing: 4px;
-                    }
-
-                    .brand-subtitle {
-                        font-size: 0.65rem;
-                    }
-
-                    .form-group-checkbox {
-                        flex-direction: column;
-                        align-items: flex-start;
-                    }
+                /* ── Responsive — pantallas muy pequeñas ── */
+                @media (max-width: 360px) {
+                    .login-container { padding: 1.25rem 0.875rem; }
+                    .logo-container { width: 70px; height: 70px; }
+                    .logo-icon { width: 38px; height: 38px; }
+                    .logo-weights { width: 86px; }
+                    .weight-left, .weight-right { width: 18px; height: 28px; }
+                    .login-form { padding: 1.75rem 1rem; }
+                    .form-title { font-size: 1rem; }
+                    .brand-subtitle { font-size: 0.55rem; letter-spacing: 1.5px; }
                 }
             `}</style>
         </GuestLayout>

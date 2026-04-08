@@ -16,6 +16,8 @@ use App\Http\Controllers\Cliente\ClienteController as ClientePortalController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\User;
+use Illuminate\Support\Str;
 
 // Página de bienvenida
 Route::get('/', function () {
@@ -139,6 +141,26 @@ Route::middleware(['auth', 'role:cliente'])
         Route::get('/mi-plan', [ClientePortalController::class, 'miPlan'])->name('mi-plan.index');
     });
 
+// Preview local de correo reset password
+if (app()->environment('local')) {
+    Route::get('/preview/email/password-reset', function () {
+        $cliente = User::query()->first() ?? new User([
+            'name' => 'Cliente Demo',
+            'email' => 'demo@personalbox.com',
+        ]);
 
+        $token = Str::random(64);
+        $resetUrl = url(route('password.reset', [
+            'token' => $token,
+            'email' => $cliente->email,
+        ], false));
+
+        return view('emails.password-reset', [
+            'cliente' => $cliente,
+            'resetUrl' => $resetUrl,
+            'expiraMinutos' => (int) config('auth.passwords.' . config('auth.defaults.passwords') . '.expire', 60),
+        ]);
+    })->name('preview.email.password-reset');
+}
 
 require __DIR__.'/auth.php';

@@ -22,7 +22,7 @@ export default function Welcome({ auth }) {
                     <div className="particle p6"></div>
                 </div>
 
-                {/* Navbar top */}
+                {/* Navbar top — glassmorphism */}
                 <nav className="top-nav">
                     <div className="nav-brand">
                         <svg className="nav-logo" viewBox="0 0 24 24" fill="none">
@@ -67,48 +67,19 @@ export default function Welcome({ auth }) {
                             <span className="title-line title-accent">BOX</span>
                         </h1>
                         <p className="hero-subtitle">
-                            ENTRENAMIENTO FUNCIONAL &nbsp;•&nbsp; CROSSFIT &nbsp;•&nbsp; BOXEO &nbsp;•&nbsp; ALTO RENDIMIENTO
+                            ENTRENAMIENTO FUNCIONAL • CROSSFIT • BOXEO • ALTO RENDIMIENTO
                         </p>
-                        <div className="hero-badges">
-                            <span className="badge">Clases para todos los niveles</span>
-                            <span className="badge">Entrenadores certificados</span>
-                            <span className="badge">Ambiente motivador</span>
-                        </div>
-                    </div>
-
-                    {/* CTAs */}
-                    {/* ...se elimina el botón grande central... */}
-
-                    {/* Stats rápidas */}
-                    <div className="hero-stats">
-                        <div className="stat-item">
-                            <span className="stat-icon">🏋️</span>
-                            <span className="stat-label">Clases</span>
-                            <span className="stat-sub">Grupales & Personalizadas</span>
-                        </div>
-                        <div className="stat-divider"></div>
-                        <div className="stat-item">
-                            <span className="stat-icon">👥</span>
-                            <span className="stat-label">Clientes</span>
-                            <span className="stat-sub">Gestión & Seguimiento</span>
-                        </div>
-                        <div className="stat-divider"></div>
-                        <div className="stat-item">
-                            <span className="stat-icon">💳</span>
-                            <span className="stat-label">Planes</span>
-                            <span className="stat-sub">Membresías & Control</span>
-                        </div>
                     </div>
                 </main>
 
                 {/* Footer */}
                 <footer className="welcome-footer">
-                    <p className="footer-location">📍 Armenia, Quindío</p>
+                    <p className="footer-location">Armenia, Quindío</p>
                     <p className="footer-copy">© {currentYear} Personal Box · Todos los derechos reservados</p>
                 </footer>
             </div>
 
-            <style jsx>{`
+            <style>{`
                 *, *::before, *::after {
                     margin: 0;
                     padding: 0;
@@ -179,17 +150,31 @@ export default function Welcome({ auth }) {
                     100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
                 }
 
-                /* ── Navbar ── */
+                /* ── Navbar — glassmorphism ── */
                 .top-nav {
                     position: relative;
                     z-index: 10;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 1.5rem 3rem;
-                    border-bottom: 1px solid rgba(255,20,147,0.2);
-                    background: rgba(0,0,0,0.4);
-                    backdrop-filter: blur(10px);
+                    padding: 1.25rem 3rem;
+                    background: rgba(255, 255, 255, 0.04);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+                    box-shadow:
+                        0 4px 32px rgba(0, 0, 0, 0.4),
+                        0 1px 0 rgba(255, 20, 147, 0.12) inset,
+                        0 0 60px rgba(255, 20, 147, 0.04);
+                }
+
+                /* línea neon sutil en el borde inferior del nav */
+                .top-nav::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0; left: 0; right: 0;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent, rgba(255,20,147,0.5), transparent);
                 }
 
                 .nav-brand {
@@ -199,37 +184,50 @@ export default function Welcome({ auth }) {
                 }
 
                 .nav-logo {
-                    width: 32px;
-                    height: 32px;
+                    width: 30px;
+                    height: 30px;
                     color: #FF1493;
                     filter: drop-shadow(0 0 8px #FF1493);
+                    flex-shrink: 0;
                 }
 
                 .nav-brand-name {
-                    font-size: 1.1rem;
+                    font-size: 1.05rem;
                     font-weight: 900;
                     color: #FF1493;
                     letter-spacing: 3px;
                     text-shadow: 0 0 10px rgba(255,20,147,0.5);
                 }
 
+                /* ── Botón de login — glassmorphism + neon ── */
                 .btn-nav-primary {
-                    background: rgba(255,20,147,0.1);
-                    border: 1.5px solid #FF1493;
+                    background: rgba(255, 20, 147, 0.07);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255, 255, 255, 0.14);
                     color: #FF1493;
-                    padding: 0.6rem 1.5rem;
-                    border-radius: 8px;
+                    padding: 0.55rem 1.4rem;
+                    border-radius: 10px;
                     font-weight: 700;
-                    font-size: 0.875rem;
+                    font-size: 0.85rem;
                     text-decoration: none;
                     transition: all 0.3s;
                     letter-spacing: 0.5px;
+                    box-shadow:
+                        0 0 14px rgba(255, 20, 147, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                    white-space: nowrap;
                 }
 
                 .btn-nav-primary:hover {
-                    background: #FF1493;
-                    color: #000;
-                    box-shadow: 0 0 20px rgba(255,20,147,0.5);
+                    background: rgba(255, 20, 147, 0.18);
+                    border-color: rgba(255, 20, 147, 0.6);
+                    color: #fff;
+                    box-shadow:
+                        0 0 24px rgba(255, 20, 147, 0.45),
+                        0 0 60px rgba(255, 20, 147, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+                    transform: translateY(-1px);
                 }
 
                 /* ── Hero ── */
@@ -344,8 +342,7 @@ export default function Welcome({ auth }) {
                     font-weight: 900;
                     letter-spacing: 12px;
                     color: #fff;
-                    text-shadow:
-                        0 0 30px rgba(255,255,255,0.1);
+                    text-shadow: 0 0 30px rgba(255,255,255,0.1);
                     display: block;
                 }
 
@@ -380,125 +377,6 @@ export default function Welcome({ auth }) {
                     margin-top: 0.5rem;
                 }
 
-                .hero-badges {
-                    display: flex;
-                    gap: 0.75rem;
-                    flex-wrap: wrap;
-                    justify-content: center;
-                    margin-top: 0.5rem;
-                }
-
-                .badge {
-                    padding: 0.35rem 0.75rem;
-                    border-radius: 999px;
-                    border: 1px solid rgba(255,20,147,0.35);
-                    color: #FF1493;
-                    font-size: 0.7rem;
-                    letter-spacing: 0.5px;
-                    text-transform: uppercase;
-                    background: rgba(255,20,147,0.08);
-                    box-shadow: 0 0 12px rgba(255,20,147,0.15);
-                }
-
-                /* ── Botones CTA ── */
-                .hero-ctas {
-                    display: flex;
-                    justify-content: center;
-                }
-
-                .btn-primary {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 0.625rem;
-                    background: linear-gradient(135deg, #FF1493, #C71585);
-                    color: #000;
-                    border: none;
-                    padding: 1rem 2rem;
-                    border-radius: 10px;
-                    font-weight: 900;
-                    font-size: 1rem;
-                    text-decoration: none;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 0 30px rgba(255,20,147,0.5), 0 4px 15px rgba(255,20,147,0.3);
-                    letter-spacing: 0.5px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .btn-primary::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%; left: 50%;
-                    width: 0; height: 0;
-                    background: rgba(255,255,255,0.2);
-                    border-radius: 50%;
-                    transform: translate(-50%,-50%);
-                    transition: width 0.6s, height 0.6s;
-                }
-
-                .btn-primary:hover::before {
-                    width: 300px;
-                    height: 300px;
-                }
-
-                .btn-primary:hover {
-                    transform: translateY(-4px);
-                    box-shadow: 0 0 50px rgba(255,20,147,0.7), 0 8px 25px rgba(255,20,147,0.4);
-                }
-
-                .btn-icon { font-size: 1.1rem; }
-                .btn-arrow { font-size: 1.1rem; transition: transform 0.3s; }
-                .btn-primary:hover .btn-arrow { transform: translateX(4px); }
-
-                /* ── Stats ── */
-                .hero-stats {
-                    display: flex;
-                    align-items: center;
-                    gap: 0;
-                    background: rgba(10,10,10,0.8);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    border-radius: 16px;
-                    padding: 1.5rem 2rem;
-                    backdrop-filter: blur(10px);
-                    box-shadow: 0 0 40px rgba(255,20,147,0.08);
-                    flex-wrap: wrap;
-                    justify-content: center;
-                    gap: 0;
-                }
-
-                .stat-item {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 0.25rem;
-                    padding: 0 2rem;
-                    text-align: center;
-                }
-
-                .stat-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
-
-                .stat-label {
-                    color: #FF1493;
-                    font-weight: 800;
-                    font-size: 0.9rem;
-                    letter-spacing: 1px;
-                    text-transform: uppercase;
-                }
-
-                .stat-sub {
-                    color: #555;
-                    font-size: 0.7rem;
-                    letter-spacing: 0.5px;
-                }
-
-                .stat-divider {
-                    width: 1px;
-                    height: 48px;
-                    background: rgba(255,20,147,0.2);
-                    flex-shrink: 0;
-                }
-
                 /* ── Footer ── */
                 .welcome-footer {
                     position: relative;
@@ -527,10 +405,16 @@ export default function Welcome({ auth }) {
                     font-size: 0.75rem;
                 }
 
-                /* ── Responsive ── */
+                /* ── Responsive — tablet ── */
+                @media (max-width: 900px) {
+                    .top-nav { padding: 1.1rem 2rem; }
+                    .hero { gap: 2rem; padding: 2.5rem 1.5rem; }
+                }
+
                 @media (max-width: 768px) {
                     .top-nav { padding: 1rem 1.5rem; }
                     .nav-brand-name { font-size: 0.875rem; letter-spacing: 2px; }
+                    .btn-nav-primary { font-size: 0.8rem; padding: 0.5rem 1rem; }
                     .hero { gap: 1.75rem; padding: 2rem 1.25rem; }
                     .hero-logo-container { width: 120px; height: 120px; }
                     .ring-outer  { width: 120px; height: 120px; }
@@ -539,18 +423,33 @@ export default function Welcome({ auth }) {
                     .hero-logo-icon { width: 48px; height: 48px; }
                     .title-line { letter-spacing: 6px; }
                     .hero-subtitle { font-size: 0.65rem; letter-spacing: 1.5px; }
-                    .hero-description { font-size: 0.9rem; }
-                    .hero-stats { padding: 1rem 1.25rem; gap: 0.5rem; }
-                    .stat-item { padding: 0 1rem; }
-                    .stat-divider { height: 36px; }
                     .welcome-footer { padding: 1rem 1.5rem; flex-direction: column; text-align: center; }
                 }
 
+                /* ── Responsive — móvil ── */
                 @media (max-width: 480px) {
-                    .stat-divider { display: none; }
-                    .hero-stats { gap: 1rem; }
-                    .stat-item { padding: 0.5rem 0; border-bottom: 1px solid rgba(255,20,147,0.1); width: 100%; }
-                    .stat-item:last-child { border-bottom: none; }
+                    .top-nav { padding: 0.875rem 1rem; }
+                    .nav-brand-name { font-size: 0.75rem; letter-spacing: 1.5px; }
+                    .nav-logo { width: 24px; height: 24px; }
+                    .btn-nav-primary { font-size: 0.75rem; padding: 0.45rem 0.85rem; border-radius: 8px; }
+                    .hero { gap: 1.5rem; padding: 1.5rem 1rem; }
+                    .hero-logo-container { width: 100px; height: 100px; }
+                    .ring-outer  { width: 100px; height: 100px; }
+                    .ring-middle { width: 76px;  height: 76px; }
+                    .ring-inner  { width: 54px;  height: 54px; }
+                    .hero-logo-icon { width: 40px; height: 40px; }
+                    .hero-eyebrow { font-size: 0.6rem; letter-spacing: 2px; }
+                    .title-line { letter-spacing: 4px; }
+                    .hero-subtitle { font-size: 0.6rem; letter-spacing: 1px; }
+                    .welcome-footer { padding: 0.875rem 1rem; }
+                    .footer-location { font-size: 0.75rem; }
+                    .footer-copy { font-size: 0.7rem; }
+                }
+
+                /* ── Responsive — pantallas muy pequeñas ── */
+                @media (max-width: 360px) {
+                    .nav-brand-name { display: none; }
+                    .title-line { letter-spacing: 2px; }
                 }
             `}</style>
         </>

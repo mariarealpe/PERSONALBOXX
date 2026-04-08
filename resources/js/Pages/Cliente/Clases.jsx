@@ -41,6 +41,46 @@ const fmtFechaCorta = d => d ? new Date(d).toLocaleDateString('es-CO',{weekday:'
 const dispColor = { disponible:'#22c55e', pocos:'#eab308', llena:'#ef4444' };
 const dispLabel = { disponible:'Disponible', pocos:'Pocos cupos', llena:'Llena' };
 
+/* ✅ FIX: iconos SVG usados en JSX (evita "Ico is not defined") */
+const Ico = {
+    gym: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 6v12"/><path d="M18 6v12"/><path d="M3 9h3"/><path d="M18 9h3"/><path d="M3 15h3"/><path d="M18 15h3"/><path d="M9 12h6"/>
+        </svg>
+    ),
+    check: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+        </svg>
+    ),
+    wait: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+    ),
+    user: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+    ),
+    pin: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+    ),
+    cal: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+    ),
+    list: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>
+        </svg>
+    ),
+};
+
 // ── NeonSelect con portal (fix dropdown cortado) ──────────────────────────────
 function NeonSelect({ value, onChange, options, placeholder='Todos' }) {
     const [open,setOpen]     = useState(false);
@@ -217,12 +257,18 @@ function ClaseCardCliente({ clase, onReservar, loadingId }) {
                     <div className="cc-info">
                         <div className="cc-name-row">
                             <span className="cc-name">{clase.tipo_clase?.nombre??'—'}</span>
-                            {clase.ya_reservo && <span className="badge-ok">✓ Reservado</span>}
-                            {clase.en_espera  && <span className="badge-wait">⏳ #{clase.posicion_espera}</span>}
                         </div>
                         <span className="cc-time">{fmtHora(clase.fecha_hora_inicio)} — {fmtHora(clase.fecha_hora_fin)}</span>
-                        <span className="cc-sub">👨‍🏫 {clase.instructor?.name??'—'}</span>
-                        {clase.sala && <span className="cc-sub">📍 {clase.sala}</span>}
+                        <div className="cc-instructor">
+                            <span className="ico-sm" style={{color:'rgba(255,20,147,0.6)',width:'13px',height:'13px'}}>{Ico.user}</span>
+                            <span className="cc-sub">{clase.instructor?.name??'—'}</span>
+                        </div>
+                        {clase.sala && (
+                            <div className="cc-location">
+                                <span className="ico-sm" style={{color:'rgba(255,20,147,0.6)',width:'13px',height:'13px'}}>{Ico.pin}</span>
+                                <span className="cc-sub">{clase.sala}</span>
+                            </div>
+                        )}
                     </div>
                     <div className="cc-meta">
                         {/* Badge disponibilidad */}
@@ -240,7 +286,7 @@ function ClaseCardCliente({ clase, onReservar, loadingId }) {
                         </div>
                         {/* En espera total */}
                         {llena && clase.total_espera>0 && (
-                            <span className="espera-txt">⏳ {clase.total_espera} en espera</span>
+                            <span className="espera-txt">{clase.total_espera} en espera</span>
                         )}
                     </div>
                 </div>
@@ -256,16 +302,22 @@ function ClaseCardCliente({ clase, onReservar, loadingId }) {
                 {/* Botón acción */}
                 <div className="cc-action">
                     {clase.ya_reservo ? (
-                        <div className="cc-confirmada">✓ Ya tienes reserva en esta clase</div>
+                        <div className="cc-confirmada">
+                            <span className="ico-sm">{Ico.check}</span>
+                            <span>Reserva confirmada</span>
+                        </div>
                     ) : clase.en_espera ? (
-                        <div className="cc-en-espera">⏳ En lista de espera — te avisamos si hay cupo</div>
+                        <div className="cc-en-espera">
+                            <span className="ico-sm">{Ico.wait}</span>
+                            <span>En lista de espera #{clase.posicion_espera}</span>
+                        </div>
                     ) : llena ? (
                         <button className="btn-espera" onClick={()=>onReservar(clase.id)} disabled={loading}>
-                            {loading ? '⏳ Procesando...' : '📋 Anotarme en lista de espera'}
+                            {loading ? 'Procesando...' : 'Lista de espera'}
                         </button>
                     ) : (
                         <button className="btn-reservar" onClick={()=>onReservar(clase.id)} disabled={loading}>
-                            {loading ? '⏳ Procesando...' : '✦ Reservar lugar'}
+                            {loading ? 'Procesando...' : 'Reservar'}
                         </button>
                     )}
                 </div>
@@ -280,6 +332,8 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
     const flash = props.flash??{};
 
     const today = new Date(); today.setHours(0,0,0,0);
+
+    const hasFechaFiltro = !!filters?.fecha;
 
     const [selectedDate, setSelectedDate] = useState(filters?.fecha || toYMD(today));
     const [calView,      setCalView]      = useState('month');
@@ -309,8 +363,8 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
 
     // Flash message
     useEffect(()=>{
-        if (flash.success) { setFlashMsg({type:'success',msg:flash.success}); setTimeout(()=>setFlashMsg(null),5000); }
-        if (flash.error)   { setFlashMsg({type:'error',  msg:flash.error  }); setTimeout(()=>setFlashMsg(null),4000); }
+        if (flash.success) { setFlashMsg({type:'success',msg:flash.success}); }
+        if (flash.error)   { setFlashMsg({type:'error',  msg:flash.error  }); }
     },[flash.success, flash.error]);
 
     // Polling 30s
@@ -374,14 +428,12 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
         setLoadingId(claseId);
         router.post('/cliente/clases/reservar',{clase_id:claseId},{
             onSuccess: page=>{
-                const msg = page.props.flash?.success??'¡Reserva confirmada! 🎉';
+                const msg = page.props.flash?.success ?? '¡Reserva confirmada!';
                 setFlashMsg({type:'success',msg});
-                setTimeout(()=>setFlashMsg(null),5000);
                 setLoadingId(null);
             },
             onError: e=>{
                 setFlashMsg({type:'error',msg:Object.values(e)[0]});
-                setTimeout(()=>setFlashMsg(null),4000);
                 setLoadingId(null);
             },
         });
@@ -401,6 +453,22 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
         {value:'llena',     label:'Llena'},
     ];
 
+    // Si no hay fecha filtrada y el día seleccionado no tiene clases,
+    // saltar al primer día disponible para que sí se vean en pantalla.
+    useEffect(() => {
+        if (hasFechaFiltro) return;
+        const currentHas = (clasesMap[selectedDate]?.length ?? 0) > 0;
+        if (currentHas) return;
+
+        const keys = Object.keys(clasesMap).sort(); // YYYY-MM-DD ordena bien
+        if (!keys.length) return;
+
+        const first = keys[0];
+        setSelectedDate(first);
+        const d = parseYMD(first);
+        setViewMonth({ year: d.getFullYear(), month: d.getMonth() });
+    }, [clasesMap, selectedDate, hasFechaFiltro]);
+
     return (
         <ClienteLayout user={user}>
             <Head title="Clases Disponibles"/>
@@ -410,7 +478,7 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
                 {/* ── Header ── */}
                 <div className="cr-hd">
                     <div>
-                        <h1 className="cr-title">🏋️ Clases</h1>
+                        <h1 className="cr-title"><span className="ico-lg">{Ico.cal}</span> Clases</h1>
                         {mainView==='calendario' && (
                             <p className="cr-sub">
                                 {isToday&&<span className="hoy-chip">Hoy</span>}
@@ -432,17 +500,27 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
                     </div>
                 </div>
 
-                {/* ── Flash ── */}
+                {/* ── Flash Modal ── */}
                 {flashMsg && (
-                    <div className={`flash ${flashMsg.type}`}>
-                        {flashMsg.type==='success'?'✓':'✕'} {flashMsg.msg}
+                    <div className="flash-overlay">
+                        <div className={`flash-modal ${flashMsg.type}`}>
+                            <div className="flash-header">
+                                <div className="flash-content">
+                                    <span className="flash-ico">{flashMsg.type==='success'?Ico.check:Ico.wait}</span>
+                                    <p className="flash-text">{flashMsg.msg}</p>
+                                </div>
+                                <button className="flash-close" onClick={()=>setFlashMsg(null)}>
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
                 {/* ── Tabs vista principal ── */}
                 <div className="main-tabs">
-                    <button className={`mtab ${mainView==='calendario'?'act':''}`} onClick={()=>setMainView('calendario')}>📅 Calendario</button>
-                    <button className={`mtab ${mainView==='todas'?'act':''}`}      onClick={()=>setMainView('todas')}>📋 Todas las Clases</button>
+                    <button className={`mtab ${mainView==='calendario'?'act':''}`} onClick={()=>setMainView('calendario')}><span className="ico-sm">{Ico.cal}</span> Calendario</button>
+                    <button className={`mtab ${mainView==='todas'?'act':''}`}      onClick={()=>setMainView('todas')}><span className="ico-sm">{Ico.list}</span> Todas las Clases</button>
                 </div>
 
                 {/* ══════════════════════════════════════════════
@@ -510,7 +588,7 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
                                 <div className="clases-list">
                                     {clasesDia.length===0 ? (
                                         <div className="empty-day">
-                                            <span className="empty-ico">🏋️</span>
+                                            <span className="empty-ico-svg">{Ico.gym}</span>
                                             <p className="empty-txt">No hay clases para este día</p>
                                             <p className="empty-sub">Prueba seleccionando otro día en el calendario</p>
                                         </div>
@@ -578,7 +656,7 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
                         {/* Lista */}
                         {todasClases.length===0 ? (
                             <div className="empty-day">
-                                <span className="empty-ico">🏋️</span>
+                                <span className="empty-ico-svg">{Ico.gym}</span>
                                 <p className="empty-txt">No hay clases disponibles</p>
                             </div>
                         ) : (
@@ -610,6 +688,31 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
                 )}
             </div>
 
+            {/* ── SVG Icons (fix Ico undefined) ───────────────────────────────────────── */}
+            <div style={{display:'none'}}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 6v12"/><path d="M18 6v12"/><path d="M3 9h3"/><path d="M18 9h3"/><path d="M3 15h3"/><path d="M18 15h3"/><path d="M9 12h6"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>
+                </svg>
+            </div>
+
             <style>{`
 /* ── Root ── */
 *{box-sizing:border-box;}
@@ -618,24 +721,71 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
 /* Header */
 .cr-hd{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;}
 .cr-title{font-size:clamp(1.8rem,5vw,2.4rem);font-weight:900;color:#FF1493;margin:0;letter-spacing:1px;text-shadow:0 0 20px rgba(255,20,147,0.5);}
-.cr-sub{color:rgba(255,255,255,0.45);font-size:0.875rem;margin:0.25rem 0 0;display:flex;align-items:center;gap:0.5rem;}
-.hoy-chip{background:rgba(255,20,147,0.15);border:1px solid rgba(255,20,147,0.4);color:#FF1493;font-size:0.6rem;font-weight:800;padding:0.1rem 0.5rem;border-radius:20px;text-transform:uppercase;letter-spacing:1px;}
-.hd-right{display:flex;align-items:center;gap:0.75rem;}
-.live-ind{display:flex;align-items:center;gap:0.4rem;}
-.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:lp 2s ease-in-out infinite;}
-@keyframes lp{0%,100%{opacity:1}50%{opacity:0.4}}
-.live-txt{color:rgba(255,255,255,0.35);font-size:0.72rem;}
-.refresh-btn{background:transparent;border:1px solid rgba(255,20,147,0.3);color:#FF1493;border-radius:6px;padding:0.2rem 0.5rem;cursor:pointer;font-size:0.75rem;transition:all 0.2s;}
-.refresh-btn:hover{background:rgba(255,20,147,0.1);}
+.ico-lg{width:1.4em;height:1.4em;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;color:#FF1493;filter:drop-shadow(0 0 8px rgba(255,20,147,0.6));}
+.ico-lg svg{width:100%;height:100%;}
 
-/* Flash */
-.flash{padding:0.875rem 1.25rem;border-radius:10px;font-weight:700;font-size:0.875rem;}
-.flash.success{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.4);color:#4ade80;}
-.flash.error  {background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.4); color:#f87171;}
+/* Flash Modal - Ventana emergente centrada */
+.flash-overlay{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+    background:rgba(0,0,0,0.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    backdrop-filter:blur(4px);
+    -webkit-backdrop-filter:blur(4px);
+    animation:fadeIn 0.25s ease;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.flash-modal{
+    display:flex;
+    flex-direction:column;
+    width:auto;
+    max-width:min(420px,calc(100vw - 40px));
+    border-radius:12px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 40px rgba(255,20,147,0.2);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border:1px solid rgba(255,20,147,0.2);
+    overflow:hidden;
+    animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+.flash-modal.success{background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.3);}
+.flash-modal.error{background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3);}
+.flash-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;padding:1.5rem;}
+.flash-content{display:flex;align-items:flex-start;gap:1rem;flex:1;min-width:0;}
+.flash-ico{display:flex;width:24px;height:24px;flex-shrink:0;color:#FF1493;margin-top:0.1rem;}
+.flash-modal.success .flash-ico{color:#4ade80;}
+.flash-modal.error .flash-ico{color:#fca5a5;}
+.flash-text{color:#fff;font-size:0.9rem;font-weight:600;line-height:1.5;margin:0;word-break:break-word;}
+.flash-close{
+    background:rgba(255,255,255,0.1);
+    border:1px solid rgba(255,255,255,0.2);
+    border-radius:6px;
+    width:28px;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:rgba(255,255,255,0.6);
+    cursor:pointer;
+    font-size:1rem;
+    font-weight:bold;
+    transition:all 0.2s;
+    padding:0;
+    font-family:inherit;
+    flex-shrink:0;
+}
+.flash-close:hover{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.9);}
 
 /* Tabs */
 .main-tabs{display:flex;gap:0.35rem;background:rgba(255,20,147,0.04);border:1px solid rgba(255,20,147,0.15);border-radius:12px;padding:0.3rem;width:fit-content;}
-.mtab{background:none;border:none;color:rgba(255,255,255,0.4);padding:0.55rem 1.2rem;border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.mtab{display:flex;align-items:center;gap:.35rem;background:none;border:none;color:rgba(255,255,255,0.4);padding:0.55rem 1.2rem;border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
 .mtab.act{background:rgba(255,20,147,0.18);border:1px solid rgba(255,20,147,0.4);color:#FF1493;}
 .mtab:hover:not(.act){color:rgba(255,20,147,0.7);}
 
@@ -717,61 +867,49 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
 .ns-drop::-webkit-scrollbar-thumb{background:rgba(255,20,147,0.3);border-radius:4px;}
 
 /* Lista día */
-.cr-list-col{display:flex;flex-direction:column;gap:1rem;}
-.day-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;}
-.dstat{background:rgba(255,20,147,0.04);border:1px solid rgba(255,20,147,0.14);border-radius:12px;padding:0.875rem;text-align:center;}
-.dstat-n{display:block;color:#FF1493;font-size:1.6rem;font-weight:900;line-height:1;}
-.dstat-l{display:block;color:rgba(255,255,255,0.3);font-size:0.6rem;text-transform:uppercase;letter-spacing:1px;margin-top:0.25rem;}
-.clases-list{display:flex;flex-direction:column;gap:0.75rem;}
-.cc-highlight-wrap{animation:hlAnim 1s ease;}
-@keyframes hlAnim{0%,100%{box-shadow:none}50%{box-shadow:0 0 25px rgba(255,20,147,0.6)}}
+.cr-list-col{display:flex;flex-direction:column;gap:0.8rem;}
+.day-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0.55rem;}
+.dstat{background:rgba(255,20,147,0.04);border:1px solid rgba(255,20,147,0.14);border-radius:10px;padding:0.6rem 0.5rem;text-align:center;}
+.dstat-n{display:block;color:#FF1493;font-size:1.35rem;font-weight:900;line-height:1;}
+.dstat-l{display:block;color:rgba(255,255,255,0.3);font-size:0.52rem;text-transform:uppercase;letter-spacing:0.8px;margin-top:0.18rem;}
 
-.empty-day{text-align:center;padding:3.5rem 1rem;background:rgba(255,20,147,0.02);border:1px dashed rgba(255,20,147,0.2);border-radius:16px;}
-.empty-ico{font-size:2.5rem;display:block;margin-bottom:0.75rem;}
-.empty-txt{color:rgba(255,255,255,0.3);margin:0 0 0.5rem;}
-.empty-sub{color:rgba(255,255,255,0.2);font-size:0.8rem;margin:0;}
-
-/* Paginación */
-.pagination{display:flex;justify-content:center;flex-wrap:wrap;gap:0.4rem;margin-top:0.5rem;}
-.pg-btn{background:rgba(255,20,147,0.07);border:1px solid rgba(255,20,147,0.2);color:#FF1493;padding:0.5rem 0.875rem;border-radius:8px;cursor:pointer;transition:all 0.2s;font-weight:600;font-size:0.8rem;font-family:inherit;}
-.pg-btn:hover:not(:disabled){background:rgba(255,20,147,0.18);border-color:#FF1493;}
-.pg-btn.act{background:#FF1493;color:#000;border-color:#FF1493;}
-.pg-btn:disabled{cursor:not-allowed;}
-
-/* ═══ TARJETA CLASE CLIENTE ═══ */
-.cc{display:flex;background:rgba(255,20,147,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,20,147,0.14);border-radius:14px;overflow:hidden;transition:all 0.2s;box-shadow:0 2px 12px rgba(0,0,0,0.3);}
-.cc:hover{border-color:var(--tc,#FF1493);box-shadow:0 4px 24px rgba(255,20,147,0.15);transform:translateY(-1px);}
+/* Tarjeta clase cliente - compacta */
+.cc{display:flex;background:rgba(255,20,147,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,20,147,0.14);border-radius:12px;overflow:hidden;transition:all 0.2s;box-shadow:0 1px 8px rgba(0,0,0,0.25);}
+.cc:hover{border-color:var(--tc,#FF1493);box-shadow:0 3px 16px rgba(255,20,147,0.12);transform:none;}
 .cc-reservada{border-color:rgba(34,197,94,0.3)!important;}
-.cc-reservada:hover{border-color:#22c55e!important;box-shadow:0 4px 20px rgba(34,197,94,0.15)!important;}
+.cc-reservada:hover{border-color:#22c55e!important;box-shadow:0 3px 14px rgba(34,197,94,0.12)!important;}
 .cc-espera{border-color:rgba(234,179,8,0.3)!important;}
-.cc-bar{width:4px;flex-shrink:0;}
-.cc-body{flex:1;padding:0.875rem 1rem;min-width:0;display:flex;flex-direction:column;gap:0.6rem;}
-.cc-top{display:flex;justify-content:space-between;gap:0.75rem;}
-.cc-info{display:flex;flex-direction:column;gap:0.18rem;min-width:0;}
-.cc-name-row{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
-.cc-name{color:#fff;font-weight:800;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.badge-ok  {background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;font-size:0.62rem;font-weight:800;padding:0.1rem 0.45rem;border-radius:20px;}
-.badge-wait{background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#fbbf24;font-size:0.62rem;font-weight:800;padding:0.1rem 0.45rem;border-radius:20px;}
-.cc-time{color:rgba(255,255,255,0.5);font-size:0.78rem;}
-.cc-sub{color:rgba(255,255,255,0.38);font-size:0.73rem;}
-.cc-meta{display:flex;flex-direction:column;align-items:flex-end;gap:0.35rem;flex-shrink:0;}
-.disp-badge{padding:0.25rem 0.55rem;border-radius:6px;font-size:0.63rem;font-weight:700;white-space:nowrap;}
-.cc-cupos{text-align:right;font-size:0.88rem;}
-.cupos-lbl{display:block;color:rgba(255,255,255,0.25);font-size:0.58rem;text-transform:uppercase;letter-spacing:0.5px;}
-.espera-txt{color:#fbbf24;font-size:0.65rem;font-weight:600;}
-.ocp-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;}
+.cc-bar{width:3px;flex-shrink:0;}
+.cc-body{flex:1;padding:0.65rem 0.75rem;min-width:0;display:flex;flex-direction:column;gap:0.38rem;}
+.cc-top{display:flex;justify-content:space-between;gap:0.55rem;}
+.cc-info{display:flex;flex-direction:column;gap:0.14rem;min-width:0;flex:1;}
+.cc-name-row{display:flex;align-items:center;gap:0.35rem;flex-wrap:wrap;}
+.cc-name{color:#fff;font-weight:800;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.badge-ok  {background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);color:#4ade80;font-size:0.54rem;font-weight:800;padding:0.08rem 0.35rem;border-radius:18px;}
+.badge-wait{background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#fbbf24;font-size:0.54rem;font-weight:800;padding:0.08rem 0.35rem;border-radius:18px;}
+.cc-time{color:rgba(255,255,255,0.5);font-size:0.76rem;line-height:1.15;font-weight:600;}
+.cc-instructor,.cc-location{display:flex;align-items:center;gap:0.32rem;color:rgba(255,255,255,0.5);font-size:0.74rem;line-height:1.15;}
+.cc-sub{color:rgba(255,255,255,0.5);font-size:0.74rem;line-height:1.15;}
+.cc-meta{display:flex;flex-direction:column;align-items:flex-end;gap:0.32rem;flex-shrink:0;}
+.disp-badge{padding:0.16rem 0.38rem;border-radius:5px;font-size:0.52rem;font-weight:700;white-space:nowrap;}
+.cc-cupos{text-align:right;font-size:0.8rem;}
+.cupos-lbl{display:block;color:rgba(255,255,255,0.22);font-size:0.48rem;text-transform:uppercase;letter-spacing:0.4px;}
+.espera-txt{color:#fbbf24;font-size:0.62rem;font-weight:600;}
+.ocp-track{height:2px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;}
 .ocp-fill{height:100%;border-radius:2px;transition:width 0.4s ease;}
 
 /* Botones acción */
-.cc-action{margin-top:0.25rem;}
-.btn-reservar{width:100%;background:linear-gradient(135deg,#FF1493,#C71585);color:#000;border:none;border-radius:10px;padding:0.65rem 1rem;font-weight:900;font-size:0.875rem;cursor:pointer;transition:all 0.25s;box-shadow:0 3px 14px rgba(255,20,147,0.35);}
-.btn-reservar:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 20px rgba(255,20,147,0.5);}
+.cc-action{margin-top:0.12rem;}
+.btn-reservar{width:100%;background:linear-gradient(135deg,#FF1493,#C71585);color:#000;border:none;border-radius:8px;padding:0.5rem 0.75rem;font-weight:900;font-size:0.75rem;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 10px rgba(255,20,147,0.25);}
+.btn-reservar:hover:not(:disabled){box-shadow:0 3px 12px rgba(255,20,147,0.32);}
 .btn-reservar:disabled{opacity:0.6;cursor:not-allowed;}
-.btn-espera{width:100%;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.45);color:#fbbf24;border-radius:10px;padding:0.65rem 1rem;font-weight:700;font-size:0.875rem;cursor:pointer;transition:all 0.2s;}
-.btn-espera:hover:not(:disabled){background:rgba(234,179,8,0.15);}
+.btn-espera{width:100%;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.4);color:#fbbf24;border-radius:8px;padding:0.5rem 0.75rem;font-weight:700;font-size:0.75rem;cursor:pointer;transition:all 0.2s;}
+.btn-espera:hover:not(:disabled){background:rgba(234,179,8,0.14);}
 .btn-espera:disabled{opacity:0.6;cursor:not-allowed;}
-.cc-confirmada{background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:0.65rem;text-align:center;color:#4ade80;font-weight:700;font-size:0.875rem;}
-.cc-en-espera{background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.3);border-radius:10px;padding:0.65rem;text-align:center;color:#fbbf24;font-weight:700;font-size:0.875rem;}
+.cc-confirmada{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:0.5rem;text-align:center;color:#4ade80;font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;}
+.cc-confirmada .ico-sm{width:14px;height:14px;}
+.cc-en-espera{background:rgba(234,179,8,0.1);border:1px solid rgba(234,179,8,0.3);border-radius:8px;padding:0.5rem;text-align:center;color:#fbbf24;font-weight:700;font-size:0.75rem;display:flex;align-items:center;justify-content:center;gap:0.4rem;}
+.cc-en-espera .ico-sm{width:14px;height:14px;}
 
 /* ═══ VISTA TODAS ═══ */
 .todas-layout{display:flex;flex-direction:column;gap:1rem;}
@@ -780,29 +918,76 @@ export default function ClienteClases({ user, clases, tiposClase, filters }) {
 .dchip{display:flex;align-items:center;gap:0.45rem;padding:0.45rem 0.875rem;background:rgba(255,20,147,0.04);border:1px solid rgba(255,20,147,0.15);border-radius:20px;color:rgba(255,255,255,0.5);font-size:0.78rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
 .dchip:hover{border-color:rgba(255,20,147,0.4);color:#FF1493;}
 .dchip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.todas-list{display:flex;flex-direction:column;gap:1rem;}
-.todas-fecha-lbl{color:rgba(255,20,147,0.65);font-size:0.72rem;font-weight:700;text-transform:capitalize;margin-bottom:0.35rem;padding-left:0.25rem;}
+.todas-list{display:flex;flex-direction:column;gap:0.75rem;}
+.todas-fecha-lbl{color:rgba(255,20,147,0.65);font-size:0.68rem;font-weight:700;text-transform:capitalize;margin-bottom:0.25rem;padding-left:0.15rem;}
 
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:1100px){.cr-layout{grid-template-columns:360px 1fr;}}
-@media(max-width:850px){
+@media(max-width:900px){
     .cr-layout{grid-template-columns:1fr;}
     .cal-card{position:static;}
     .bcal{padding:1rem;}
-    .bcal-cell{min-height:46px;}
+    .bcal-cell{min-height:44px;}
     .day-stats{grid-template-columns:repeat(2,1fr);}
     .filters-grid{grid-template-columns:1fr;}
     .cr-hd{flex-direction:column;align-items:flex-start;}
 }
-@media(max-width:540px){
-    .cr-title{font-size:1.6rem;}
-    .bcal-cell{min-height:40px;}
-    .bcal-dow{font-size:0.55rem;}
-    .cc-top{flex-direction:column;}
-    .cc-meta{align-items:flex-start;flex-direction:row;gap:0.75rem;}
-    .disp-chips{gap:0.35rem;}
-    .dchip{font-size:0.72rem;padding:0.4rem 0.7rem;}
+@media(max-width:640px){
+    .cr-title{font-size:1.55rem;}
+    .main-tabs{width:100%}
+    .mtab{flex:1;justify-content:center;padding:.48rem .6rem;font-size:.75rem}
+    .view-tabs{width:100%}
+    .vtab{flex:1}
+    .filters-grid{grid-template-columns:1fr}
+    .todas-filters{padding:.8rem}
+    .todas-filters .fg{width:100%}
+    .day-stats{grid-template-columns:1fr 1fr;gap:0.55rem;}
+    .dstat{padding:0.7rem 0.55rem;border-radius:12px;}
+    .dstat-n{font-size:1.45rem;}
+    .dstat-l{font-size:0.58rem;margin-top:0.2rem;}
+    .cc-top{flex-direction:column;gap:0.32rem;}
+    .cc-meta{align-items:flex-start;flex-direction:row;gap:0.5rem;flex-wrap:wrap}
+    .cc-body{padding:0.6rem 0.65rem;gap:0.35rem;}
+    .cc-name{font-size:0.9rem;}
+    .cc-time,.cc-instructor,.cc-location{font-size:0.72rem;}
+    .cc-sub{font-size:0.72rem;}
+    .cc-cupos{font-size:0.78rem;}
+    .btn-reservar,.btn-espera,.cc-confirmada,.cc-en-espera{font-size:0.74rem;padding:0.48rem 0.7rem;}
+    .cc-confirmada,.cc-en-espera{padding:0.48rem;}
+    .disp-chips{gap:0.3rem;}
+    .dchip{font-size:0.68rem;padding:0.38rem 0.65rem;}
+    .flash-modal{max-width:calc(100vw - 30px);padding:1rem 1.2rem;}
+    .flash-modal{max-width:calc(100vw - 30px);padding:1rem 1.2rem;}
+    .flash-ico{width:22px;height:22px;}
+    .flash-text{font-size:0.84rem;}
 }
+@media(max-width:420px){
+    .cr{gap:.6rem}
+    .cr-title{font-size:1.35rem;}
+    .cr-sub{font-size:.75rem}
+    .bcal{padding:.7rem}
+    .bcal-title{font-size:1rem}
+    .bcal-cell{min-height:34px}
+    .bcal-num{font-size:.72rem}
+    .day-stats{grid-template-columns:1fr;gap:0.5rem;}
+    .dstat{padding:0.68rem 0.5rem;}
+    .dstat-n{font-size:1.4rem;}
+    .dstat-l{font-size:0.56rem;margin-top:0.2rem;}
+    .cc-body{padding:0.55rem 0.6rem;gap:0.32rem;}
+    .cc-name{font-size:0.85rem;}
+    .cc-time,.cc-instructor,.cc-location{font-size:0.7rem;}
+    .cc-sub{font-size:0.7rem;}
+    .cc-cupos{font-size:0.75rem;}
+    .btn-reservar,.btn-espera,.cc-confirmada,.cc-en-espera{font-size:0.7rem;padding:0.45rem 0.65rem}
+    .cc-confirmada,.cc-en-espera{padding:0.45rem;}
+    .badge-ok,.badge-wait{font-size:0.5rem;}
+    .flash-modal{padding:0.85rem 1rem;}
+    .flash-close{top:0.5rem;right:0.5rem;width:26px;height:26px;font-size:0.9rem;}
+    .flash-modal{padding:0.85rem 1rem;}
+    .flash-close{top:0.5rem;right:0.5rem;width:26px;height:26px;font-size:0.9rem;}
+}
+
+/* ...existing code... */
             `}</style>
         </ClienteLayout>
     );

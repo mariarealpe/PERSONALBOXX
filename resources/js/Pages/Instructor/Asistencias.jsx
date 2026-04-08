@@ -10,250 +10,238 @@ import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import InstructorLayout from '@/Layouts/InstructorLayout';
 
-export default function InstructorAsistencias({ user, clases, claseSeleccionada, asistencias, reservas, filters }) {
+const Ico = {
+    check: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+    ),
+    calendar: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+    ),
+    users: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+    ),
+    clock: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+    ),
+    search: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+    ),
+    x: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+    ),
+};
 
-    const [fecha,    setFecha]    = useState(filters?.fecha ?? new Date().toISOString().split('T')[0]);
+export default function InstructorAsistencias({ user, clases, claseSeleccionada, asistencias, reservas, filters }) {
+    const [fecha, setFecha] = useState(filters?.fecha ?? new Date().toISOString().split('T')[0]);
     const [busqueda, setBusqueda] = useState('');
-    const [flash,    setFlash]    = useState(null);
+    const [flash, setFlash] = useState(null);
 
     const estadoConfig = {
         programada: { color: '#3b82f6', label: 'Programada' },
-        en_curso:   { color: '#22c55e', label: 'En Curso'   },
+        en_curso: { color: '#22c55e', label: 'En Curso' },
         finalizada: { color: '#6b7280', label: 'Finalizada' },
-        cancelada:  { color: '#ef4444', label: 'Cancelada'  },
+        cancelada: { color: '#ef4444', label: 'Cancelada' },
     };
 
-    const hora = (dt) => dt
-        ? new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })
-        : '';
+    const hora = (dt) => dt ? new Date(dt).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
 
-    // Seleccionar una clase del listado
-    const seleccionarClase = (claseId) => {
-        router.get('/instructor/asistencias', { clase_id: claseId, fecha }, { preserveState: false });
-    };
+    const seleccionarClase = (claseId) => router.get('/instructor/asistencias', { clase_id: claseId, fecha }, { preserveState: false });
+    const cambiarFecha = (nuevaFecha) => { setFecha(nuevaFecha); router.get('/instructor/asistencias', { fecha: nuevaFecha }, { preserveState: false }); };
 
-    // Cambiar fecha → recarga la lista de clases
-    const cambiarFecha = (nuevaFecha) => {
-        setFecha(nuevaFecha);
-        router.get('/instructor/asistencias', { fecha: nuevaFecha }, { preserveState: false });
-    };
-
-    // Registrar asistencia
     const registrar = (clienteId) => {
-        router.post('/instructor/asistencias',
-            { clase_id: claseSeleccionada?.id, cliente_id: clienteId },
-            {
-                preserveState: true,
-                onSuccess: () => {
-                    setFlash({ type: 'success', msg: 'Asistencia registrada ✓' });
-                    setTimeout(() => setFlash(null), 3000);
-                },
-                onError: (errors) => {
-                    const msg = Object.values(errors)[0] ?? 'Error al registrar';
-                    setFlash({ type: 'error', msg });
-                    setTimeout(() => setFlash(null), 3000);
-                },
-            }
-        );
+        router.post('/instructor/asistencias', { clase_id: claseSeleccionada?.id, cliente_id: clienteId }, {
+            preserveState: true,
+            onSuccess: () => { setFlash({ type: 'success', msg: 'Asistencia registrada' }); setTimeout(() => setFlash(null), 3000); },
+            onError: (errors) => { setFlash({ type: 'error', msg: Object.values(errors)[0] ?? 'Error al registrar' }); setTimeout(() => setFlash(null), 3000); },
+        });
     };
 
-    // Eliminar asistencia
     const eliminar = (asistenciaId) => {
         if (!confirm('¿Eliminar esta asistencia?')) return;
         router.delete(`/instructor/asistencias/${asistenciaId}`, { preserveState: false });
     };
 
-    const asistioMap    = new Set((asistencias ?? []).map(a => a.cliente_id));
-    const reservasFilt  = (reservas ?? []).filter(r =>
-        !busqueda || r.cliente?.name?.toLowerCase().includes(busqueda.toLowerCase())
-    );
-
-    const inp = {
-        background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(255,20,147,0.3)',
-        borderRadius: 8, color: '#fff', padding: '0.625rem 1rem',
-        fontSize: '0.875rem', outline: 'none', width: '100%', boxSizing: 'border-box',
-    };
+    const asistioMap = new Set((asistencias ?? []).map(a => a.cliente_id));
+    const reservasFilt = (reservas ?? []).filter(r => !busqueda || r.cliente?.name?.toLowerCase().includes(busqueda.toLowerCase()));
 
     return (
         <InstructorLayout user={user}>
             <Head title="Asistencias" />
-
-            <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-
-                {/* Título */}
-                <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FF1493', margin: '0 0 0.5rem', textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>
-                        ✅ Asistencias
-                    </h1>
-                    <p style={{ color: '#999', margin: 0 }}>Registra la asistencia de tus alumnos</p>
+            <div className="asis-wrap">
+                <div className="asis-head">
+                    <h1 className="asis-title"><span className="asis-ico-lg">{Ico.check}</span>Asistencias</h1>
+                    <p className="asis-sub">Registra la asistencia de tus alumnos</p>
                 </div>
 
-                {/* Flash */}
-                {flash && (
-                    <div style={{ background: flash.type === 'success' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `2px solid ${flash.type === 'success' ? '#22c55e' : '#ef4444'}`, borderRadius: 8, padding: '1rem 1.5rem', marginBottom: '1.5rem', color: flash.type === 'success' ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
-                        {flash.msg}
-                    </div>
-                )}
+                {flash && <div className={`asis-flash ${flash.type}`}>{flash.msg}</div>}
 
-                {/* Selector de fecha */}
-                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <label style={{ color: '#FF1493', fontWeight: 700, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1, whiteSpace: 'nowrap' }}>
-                        📅 Fecha:
-                    </label>
-                    <input type="date" value={fecha} onChange={e => cambiarFecha(e.target.value)} style={{ ...inp, width: 'auto' }} />
-                    <span style={{ color: '#666', fontSize: '0.875rem' }}>
-                        {clases?.length ?? 0} clase(s) encontrada(s)
-                    </span>
+                <div className="asis-card asis-filter">
+                    <label className="asis-label"><span className="asis-ico">{Ico.calendar}</span>Fecha</label>
+                    <input type="date" value={fecha} onChange={e => cambiarFecha(e.target.value)} className="asis-input asis-date" />
+                    <span className="asis-muted">{clases?.length ?? 0} clase(s) encontrada(s)</span>
                 </div>
 
-                {/* Layout dos columnas */}
-                <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.5rem', alignItems: 'start' }}>
-
-                    {/* ── Columna izquierda: lista de clases ── */}
-                    <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden', boxShadow: '0 0 20px rgba(255,20,147,0.1)' }}>
-                        <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(255,20,147,0.2)' }}>
-                            <h3 style={{ color: '#FF1493', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                Clases del día
-                            </h3>
-                        </div>
-
-                        {clases && clases.length > 0 ? clases.map(clase => {
-                            const cfg    = estadoConfig[clase.estado] ?? estadoConfig.programada;
+                <div className="asis-grid">
+                    <div className="asis-card asis-left">
+                        <div className="asis-card-hd"><h3>Clases del día</h3></div>
+                        {clases?.length ? clases.map(clase => {
+                            const cfg = estadoConfig[clase.estado] ?? estadoConfig.programada;
                             const activa = claseSeleccionada?.id === clase.id;
                             return (
-                                <div
-                                    key={clase.id}
-                                    onClick={() => seleccionarClase(clase.id)}
-                                    style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,20,147,0.1)', cursor: 'pointer', background: activa ? 'rgba(255,20,147,0.1)' : 'transparent', borderLeft: activa ? '4px solid #FF1493' : '4px solid transparent', transition: 'all 0.2s' }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: clase.tipo_clase?.color ?? '#FF1493', flexShrink: 0 }} />
-                                        <span style={{ color: activa ? '#FF1493' : '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
-                                            {clase.tipo_clase?.nombre}
-                                        </span>
+                                <button key={clase.id} onClick={() => seleccionarClase(clase.id)} className={`asis-class-item ${activa ? 'active' : ''}`}>
+                                    <div className="asis-row">
+                                        <span className="asis-dot" style={{ background: clase.tipo_clase?.color ?? '#FF1493' }} />
+                                        <span className="asis-class-name">{clase.tipo_clase?.nombre}</span>
                                     </div>
-                                    <p style={{ color: '#999', margin: '0 0 0.35rem', fontSize: '0.8rem' }}>
-                                        {hora(clase.fecha_hora_inicio)} – {hora(clase.fecha_hora_fin)} · {clase.sala ?? ''}
-                                    </p>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ color: '#666', fontSize: '0.75rem' }}>
-                                            👥 {clase.total_reservas ?? 0}/{clase.capacidad_maxima}
-                                        </span>
-                                        <span style={{ color: cfg.color, fontSize: '0.7rem', fontWeight: 700 }}>{cfg.label}</span>
+                                    <p className="asis-class-meta"><span className="asis-ico-sm">{Ico.clock}</span>{hora(clase.fecha_hora_inicio)} – {hora(clase.fecha_hora_fin)} · {clase.sala ?? ''}</p>
+                                    <div className="asis-row between">
+                                        <span className="asis-cap"><span className="asis-ico-sm">{Ico.users}</span>{clase.total_reservas ?? 0}/{clase.capacidad_maxima}</span>
+                                        <span style={{ color: cfg.color, fontWeight: 700, fontSize: '.72rem' }}>{cfg.label}</span>
                                     </div>
-                                </div>
+                                </button>
                             );
-                        }) : (
-                            <div style={{ padding: '2rem', textAlign: 'center' }}>
-                                <p style={{ color: '#666', margin: 0, fontSize: '0.875rem' }}>Sin clases para esta fecha</p>
-                            </div>
-                        )}
+                        }) : <div className="asis-empty-sm">Sin clases para esta fecha</div>}
                     </div>
 
-                    {/* ── Columna derecha: registro de asistencia ── */}
                     <div>
                         {claseSeleccionada ? (
                             <>
-                                {/* Resumen de la clase */}
-                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.25rem 1.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                                <div className="asis-card asis-resumen">
                                     <div>
-                                        <h2 style={{ color: '#FF1493', fontWeight: 900, margin: '0 0 0.25rem', fontSize: '1.25rem' }}>
-                                            {claseSeleccionada.tipo_clase?.nombre}
-                                        </h2>
-                                        <p style={{ color: '#999', margin: 0, fontSize: '0.875rem' }}>
-                                            {hora(claseSeleccionada.fecha_hora_inicio)} – {hora(claseSeleccionada.fecha_hora_fin)} · {claseSeleccionada.sala}
-                                        </p>
+                                        <h2>{claseSeleccionada.tipo_clase?.nombre}</h2>
+                                        <p><span className="asis-ico-sm">{Ico.clock}</span>{hora(claseSeleccionada.fecha_hora_inicio)} – {hora(claseSeleccionada.fecha_hora_fin)} · {claseSeleccionada.sala}</p>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '1.5rem' }}>
-                                        <div style={{ textAlign: 'center' }}>
-                                            <p style={{ color: '#22c55e', fontSize: '1.75rem', fontWeight: 900, margin: 0 }}>{asistencias?.length ?? 0}</p>
-                                            <p style={{ color: '#666', fontSize: '0.7rem', margin: 0, textTransform: 'uppercase' }}>Asistieron</p>
-                                        </div>
-                                        <div style={{ textAlign: 'center' }}>
-                                            <p style={{ color: '#FF1493', fontSize: '1.75rem', fontWeight: 900, margin: 0 }}>{reservas?.length ?? 0}</p>
-                                            <p style={{ color: '#666', fontSize: '0.7rem', margin: 0, textTransform: 'uppercase' }}>Reservas</p>
-                                        </div>
+                                    <div className="asis-kpis">
+                                        <div><b className="ok">{asistencias?.length ?? 0}</b><span>Asistieron</span></div>
+                                        <div><b className="pink">{reservas?.length ?? 0}</b><span>Reservas</span></div>
                                     </div>
                                 </div>
 
-                                {/* Buscador */}
-                                <div style={{ marginBottom: '1rem' }}>
+                                <div className="asis-search-wrap">
+                                    <span className="asis-search-ico">{Ico.search}</span>
                                     <input
                                         type="text"
-                                        placeholder="🔍 Buscar alumno por nombre..."
+                                        placeholder="Buscar alumno por nombre..."
                                         value={busqueda}
                                         onChange={e => setBusqueda(e.target.value)}
-                                        style={inp}
+                                        className="asis-input asis-search"
                                     />
                                 </div>
 
-                                {/* Lista alumnos */}
-                                <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, overflow: 'hidden' }}>
-                                    <div style={{ padding: '1rem 1.25rem', borderBottom: '2px solid rgba(255,20,147,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <h3 style={{ color: '#FF1493', fontWeight: 900, margin: 0, fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                            Alumnos con Reserva
-                                        </h3>
-                                        <span style={{ color: '#666', fontSize: '0.8rem' }}>{reservasFilt.length} alumnos</span>
+                                <div className="asis-card">
+                                    <div className="asis-card-hd between">
+                                        <h3>Alumnos con Reserva</h3>
+                                        <span className="asis-muted">{reservasFilt.length} alumnos</span>
                                     </div>
 
-                                    {reservasFilt.length > 0 ? reservasFilt.map(reserva => {
-                                        const asistio      = asistioMap.has(reserva.cliente_id);
+                                    {reservasFilt.length ? reservasFilt.map(reserva => {
+                                        const asistio = asistioMap.has(reserva.cliente_id);
                                         const asistenciaObj = (asistencias ?? []).find(a => a.cliente_id === reserva.cliente_id);
                                         return (
-                                            <div key={reserva.id} style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,20,147,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', background: asistio ? 'rgba(34,197,94,0.03)' : 'transparent' }}>
-                                                {/* Avatar + nombre */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: asistio ? 'rgba(34,197,94,0.15)' : 'rgba(255,20,147,0.1)', border: `2px solid ${asistio ? '#22c55e' : 'rgba(255,20,147,0.3)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: asistio ? '#22c55e' : '#FF1493', fontWeight: 900, fontSize: '0.9rem', flexShrink: 0 }}>
-                                                        {reserva.cliente?.name?.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <p style={{ color: '#fff', fontWeight: 700, margin: 0, fontSize: '0.9rem' }}>{reserva.cliente?.name}</p>
-                                                        <p style={{ color: '#666', margin: 0, fontSize: '0.75rem' }}>{reserva.cliente?.email}</p>
+                                            <div key={reserva.id} className={`asis-user-row ${asistio ? 'is-ok' : ''}`}>
+                                                <div className="asis-user-main">
+                                                    <div className={`asis-avatar ${asistio ? 'ok' : ''}`}>{reserva.cliente?.name?.charAt(0).toUpperCase()}</div>
+                                                    <div className="asis-user-text">
+                                                        <p>{reserva.cliente?.name}</p>
+                                                        <small>{reserva.cliente?.email}</small>
                                                     </div>
                                                 </div>
-                                                {/* Acciones */}
-                                                <div>
+
+                                                <div className="asis-actions">
                                                     {asistio ? (
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                            <span style={{ color: '#22c55e', fontSize: '0.85rem', fontWeight: 700 }}>✓ Asistió</span>
+                                                        <>
+                                                            <span className="asis-ok-label"><span className="asis-ico-sm">{Ico.check}</span>Asistió</span>
                                                             {claseSeleccionada.estado !== 'finalizada' && (
-                                                                <button
-                                                                    onClick={() => eliminar(asistenciaObj?.id)}
-                                                                    style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: 6, padding: '0.25rem 0.6rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
-                                                                >
-                                                                    ✕
+                                                                <button onClick={() => eliminar(asistenciaObj?.id)} className="btn-danger">
+                                                                    <span className="asis-ico-sm">{Ico.x}</span>Quitar
                                                                 </button>
                                                             )}
-                                                        </div>
+                                                        </>
                                                     ) : (
                                                         <button
                                                             onClick={() => registrar(reserva.cliente_id)}
                                                             disabled={claseSeleccionada.estado === 'finalizada' || claseSeleccionada.estado === 'cancelada'}
-                                                            style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid #22c55e', color: '#22c55e', borderRadius: 6, padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', opacity: (claseSeleccionada.estado === 'finalizada' || claseSeleccionada.estado === 'cancelada') ? 0.5 : 1 }}
+                                                            className="btn-success"
                                                         >
-                                                            ✅ Registrar
+                                                            <span className="asis-ico-sm">{Ico.check}</span>Registrar
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
                                         );
-                                    }) : (
-                                        <div style={{ padding: '2.5rem', textAlign: 'center' }}>
-                                            <p style={{ color: '#666', margin: 0 }}>
-                                                {busqueda ? 'No se encontró ningún alumno con ese nombre.' : 'No hay alumnos reservados en esta clase.'}
-                                            </p>
-                                        </div>
-                                    )}
+                                    }) : <div className="asis-empty-lg">{busqueda ? 'No se encontró ningún alumno con ese nombre.' : 'No hay alumnos reservados en esta clase.'}</div>}
                                 </div>
                             </>
                         ) : (
-                            <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.2)', borderRadius: 12, padding: '4rem', textAlign: 'center' }}>
-                                <p style={{ color: '#666', fontSize: '1rem', margin: 0 }}>← Selecciona una clase para gestionar asistencias</p>
-                            </div>
+                            <div className="asis-card asis-empty-panel">Selecciona una clase para gestionar asistencias</div>
                         )}
                     </div>
                 </div>
             </div>
+
+            <style>{`
+                .asis-wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:1rem}
+                .asis-head{margin-bottom:.4rem}.asis-title{display:flex;align-items:center;gap:.55rem;color:#FF1493;margin:0;font-size:clamp(1.5rem,3.8vw,2rem);font-weight:900;text-shadow:0 0 12px rgba(255,20,147,.45)}
+                .asis-sub{color:#777;margin:.25rem 0 0;font-size:.9rem}
+                .asis-ico-lg{width:24px;height:24px;display:inline-flex}.asis-ico{width:16px;height:16px;display:inline-flex}.asis-ico-sm{width:14px;height:14px;display:inline-flex;opacity:.85}
+                .asis-card{background:rgba(255,255,255,.03);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.07);border-top:1px solid rgba(255,255,255,.14);border-radius:14px;box-shadow:0 0 24px rgba(255,20,147,.08),0 8px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+                .asis-flash{padding:.85rem 1rem;border-radius:10px;font-weight:700}.asis-flash.success{color:#22c55e;border:1px solid #22c55e55;background:rgba(34,197,94,.12)}.asis-flash.error{color:#ef4444;border:1px solid #ef444455;background:rgba(239,68,68,.12)}
+                .asis-filter{padding:1rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}.asis-label{color:#FF1493;font-weight:800;font-size:.8rem;display:flex;align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:1px}
+                .asis-input{background:rgba(0,0,0,.45);border:1px solid rgba(255,20,147,.35);color:#fff;border-radius:10px;padding:.6rem .8rem;outline:none}
+                .asis-date{min-width:180px}.asis-muted{color:#6c6c6c;font-size:.8rem}
+
+                .asis-grid{display:grid;grid-template-columns:320px 1fr;gap:1rem;align-items:start}
+                .asis-left{overflow:hidden}.asis-card-hd{padding:.95rem 1rem;border-bottom:1px solid rgba(255,20,147,.2)}.asis-card-hd h3{margin:0;color:#FF1493;font-size:.82rem;font-weight:900;text-transform:uppercase;letter-spacing:1px}
+                .asis-row{display:flex;align-items:center;gap:.45rem}.between{justify-content:space-between}
+                .asis-class-item{width:100%;text-align:left;padding:.9rem 1rem;background:transparent;border:none;border-left:3px solid transparent;border-bottom:1px solid rgba(255,20,147,.1);cursor:pointer}
+                .asis-class-item.active{background:rgba(255,20,147,.1);border-left-color:#FF1493}
+                .asis-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.asis-class-name{color:#fff;font-weight:700;font-size:.88rem}
+                .asis-class-meta{margin:.35rem 0;color:#8f8f8f;font-size:.78rem;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap}
+                .asis-cap{color:#b5b5b5;font-size:.75rem;display:inline-flex;align-items:center;gap:.35rem}
+                .asis-empty-sm{padding:1.6rem;text-align:center;color:#666;font-size:.85rem}
+
+                .asis-resumen{padding:1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem}
+                .asis-resumen h2{margin:0 0 .2rem;color:#FF1493;font-size:1.15rem;font-weight:900}
+                .asis-resumen p{margin:0;color:#949494;font-size:.82rem;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap}
+                .asis-kpis{display:flex;gap:1rem}.asis-kpis div{text-align:center}.asis-kpis b{display:block;font-size:1.4rem;line-height:1;font-weight:900}.asis-kpis .ok{color:#22c55e}.asis-kpis .pink{color:#FF1493}.asis-kpis span{font-size:.68rem;color:#666;text-transform:uppercase}
+
+                .asis-search-wrap{position:relative;margin-bottom:.8rem}.asis-search-ico{position:absolute;left:.72rem;top:50%;transform:translateY(-50%);width:15px;height:15px;color:#7a7a7a}
+                .asis-search{width:100%;padding-left:2rem}
+                .asis-user-row{padding:.8rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:.9rem;border-bottom:1px solid rgba(255,20,147,.08)}
+                .asis-user-row.is-ok{background:rgba(34,197,94,.04)}
+                .asis-user-main{display:flex;align-items:center;gap:.8rem;min-width:0}.asis-avatar{width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,20,147,.12);border:1px solid rgba(255,20,147,.4);color:#FF1493;font-weight:900;flex-shrink:0}
+                .asis-avatar.ok{background:rgba(34,197,94,.14);border-color:#22c55e88;color:#22c55e}
+                .asis-user-text p{margin:0;color:#fff;font-size:.88rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                .asis-user-text small{color:#666;font-size:.74rem}
+                .asis-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+                .asis-ok-label{color:#22c55e;font-size:.82rem;font-weight:700;display:inline-flex;align-items:center;gap:.3rem}
+                .btn-success,.btn-danger{border-radius:8px;padding:.38rem .7rem;display:inline-flex;align-items:center;gap:.3rem;font-weight:700;font-size:.77rem;cursor:pointer}
+                .btn-success{background:rgba(34,197,94,.14);border:1px solid #22c55e;color:#22c55e}
+                .btn-danger{background:rgba(239,68,68,.12);border:1px solid #ef4444;color:#ef4444}
+                .btn-success:disabled{opacity:.5;cursor:not-allowed}
+                .asis-empty-lg{padding:2rem;text-align:center;color:#666}
+                .asis-empty-panel{padding:3rem 1rem;text-align:center;color:#666}
+
+                @media (max-width:980px){.asis-grid{grid-template-columns:1fr}.asis-left{order:2}}
+                @media (max-width:620px){
+                    .asis-filter{padding:.85rem}.asis-date{min-width:100%}
+                    .asis-user-row{flex-direction:column;align-items:flex-start}.asis-actions{width:100%}
+                    .asis-kpis{width:100%;justify-content:flex-start}
+                }
+            `}</style>
         </InstructorLayout>
     );
 }

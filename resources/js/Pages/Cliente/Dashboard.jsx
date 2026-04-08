@@ -12,6 +12,14 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
     const dias = Math.floor(stats.plan_actual?.dias_restantes ?? 0);
     const colorPlan = dias <= 5 ? '#ef4444' : dias <= 10 ? '#eab308' : '#22c55e';
 
+    const Ico = {
+      list: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>,
+      gym: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 6v12"/><path d="M18 6v12"/><path d="M3 9h3"/><path d="M18 9h3"/><path d="M3 15h3"/><path d="M18 15h3"/><path d="M9 12h6"/></svg>,
+      card: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+      check: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 6L9 17l-5-5"/></svg>,
+      chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+    };
+
     return (
         <ClienteLayout user={user}>
             <Head title="Dashboard" />
@@ -27,11 +35,11 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
                 {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                     {[
-                        { icon: '📋', label: 'Reservas Activas', value: fmt(stats.reservas_activas) },
-                        { icon: '🏋️', label: 'Clases Tomadas',   value: fmt(stats.clases_tomadas)   },
+                        { icon: Ico.list, label: 'Reservas Activas', value: fmt(stats.reservas_activas) },
+                        { icon: Ico.gym,  label: 'Clases Tomadas',   value: fmt(stats.clases_tomadas)   },
                     ].map(s => (
                         <div key={s.label} style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                            <span style={{ fontSize: '2.5rem' }}>{s.icon}</span>
+                            <span style={{ width: '2.5rem', height: '2.5rem', display: 'inline-flex', color: C }}>{s.icon}</span>
                             <div>
                                 <p style={{ color: '#999', fontSize: '0.75rem', margin: '0 0 0.3rem', textTransform: 'uppercase', letterSpacing: 1 }}>{s.label}</p>
                                 <h3 style={{ color: C, fontSize: '2.2rem', fontWeight: 900, margin: 0 }}>{s.value}</h3>
@@ -41,7 +49,7 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
 
                     {/* Card plan */}
                     <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 12, padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                        <span style={{ fontSize: '2.5rem' }}>💳</span>
+                        <span style={{ width: '2.5rem', height: '2.5rem', display: 'inline-flex', color: C }}>{Ico.card}</span>
                         <div>
                             <p style={{ color: '#999', fontSize: '0.75rem', margin: '0 0 0.3rem', textTransform: 'uppercase', letterSpacing: 1 }}>Mi Plan</p>
                             {stats.plan_actual ? (
@@ -76,9 +84,7 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
                                             </p>
                                         </div>
                                     </div>
-                                    <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid #22c55e', borderRadius: 20, padding: '0.2rem 0.75rem', fontSize: '0.75rem', fontWeight: 700 }}>
-                                        ✓ Confirmada
-                                    </span>
+                                    <span style={{ display:'inline-flex', width:14, height:14 }}>{Ico.check}</span> Confirmada
                                 </div>
                             ))}
                         </div>
@@ -86,7 +92,8 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
                         <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.2)', borderRadius: 12, padding: '3rem', textAlign: 'center' }}>
                             <p style={{ color: '#666', margin: '0 0 1rem' }}>No tienes clases reservadas próximamente.</p>
                             <Link href="/cliente/clases" style={{ background: C, color: '#fff', borderRadius: 8, padding: '0.75rem 1.5rem', fontWeight: 700, textDecoration: 'none' }}>
-                                🏋️ Ver Clases Disponibles
+                              <span style={{ width:14, height:14, display:'inline-flex', marginRight:6 }}>{Ico.gym}</span>
+                              Ver Clases Disponibles
                             </Link>
                         </div>
                     )}
@@ -97,17 +104,17 @@ export default function ClienteDashboard({ user, stats, proximasClases }) {
                     <h2 style={{ color: C, fontSize: '1.3rem', fontWeight: 900, margin: '0 0 1.5rem', textTransform: 'uppercase', letterSpacing: 2 }}>Acciones Rápidas</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
                         {[
-                            { icon: '🏋️', label: 'Reservar Clase', href: '/cliente/clases'    },
-                            { icon: '📋', label: 'Mis Reservas',   href: '/cliente/reservas'  },
-                            { icon: '📈', label: 'Mi Historial',   href: '/cliente/historial' },
-                            { icon: '💳', label: 'Mi Plan',        href: '/cliente/mi-plan'   },
+                            { icon: Ico.gym,  label: 'Reservar Clase', href: '/cliente/clases'    },
+                            { icon: Ico.list, label: 'Mis Reservas',   href: '/cliente/reservas'  },
+                            { icon: Ico.chart,label: 'Mi Historial',   href: '/cliente/historial' },
+                            { icon: Ico.card, label: 'Mi Plan',        href: '/cliente/mi-plan'   },
                         ].map(a => (
                             <Link key={a.label} href={a.href} style={{ textDecoration: 'none' }}>
                                 <div style={{ background: 'rgba(255,20,147,0.1)', border: `2px solid ${C}`, color: C, padding: '1.5rem 1rem', borderRadius: 12, fontWeight: 700, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', textAlign: 'center', fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.3s' }}
                                      onMouseOver={e => e.currentTarget.style.background = 'rgba(255,20,147,0.2)'}
                                      onMouseOut={e => e.currentTarget.style.background = 'rgba(255,20,147,0.1)'}
                                 >
-                                    <span style={{ fontSize: '1.75rem' }}>{a.icon}</span>
+                                    <span style={{ width: '2rem', height: '2rem', display: 'inline-flex', color: C }}>{a.icon}</span>
                                     <span>{a.label}</span>
                                 </div>
                             </Link>

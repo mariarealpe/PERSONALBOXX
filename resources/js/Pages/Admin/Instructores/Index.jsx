@@ -1,6 +1,7 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useState } from 'react';
+import ConfirmDialog from '../../../Components/ConfirmDialog';
 
 export default function InstructoresIndex({ auth, instructores, tiposClase, filters }) {
     const [showModal, setShowModal] = useState(false);
@@ -8,6 +9,20 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
     const [search, setSearch] = useState(filters.search || '');
     const [previewFoto, setPreviewFoto] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [toast, setToast] = useState({ open: false, type: 'error', message: '' });
+    const [confirmState, setConfirmState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar',
+        onConfirm: null,
+    });
+
+    const showToast = (message, type = 'error') => {
+        setToast({ open: true, type, message });
+        setTimeout(() => setToast((t) => ({ ...t, open: false })), 4000);
+    };
 
     const { data, setData, errors, setError, clearErrors, reset } = useForm({
         name: '',
@@ -100,10 +115,46 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         }
     };
 
+    const openConfirm = (opts) => setConfirmState({ open: true, ...opts });
+    const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
+
+    const getFirstErrorMessage = (errs, fallback = 'No se pudo eliminar el instructor.') => {
+        if (!errs) return fallback;
+        const values = Object.values(errs).flat();
+        return values.find(Boolean) || fallback;
+    };
+
     const handleDelete = (instructor) => {
-        if (confirm(`¿Estás segura de eliminar al instructor "${instructor.user.name}"?`)) {
-            router.delete(route('admin.instructores.destroy', instructor.id));
-        }
+        openConfirm({
+            title: 'Eliminar instructor',
+            message: `¿Estás segura de eliminar al instructor "${instructor.user.name}"?`,
+            confirmText: 'Eliminar',
+            onConfirm: () =>
+                new Promise((resolve) => {
+                    router.delete(route('admin.instructores.destroy', instructor.id), {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            closeConfirm();
+                            showToast('Instructor eliminado correctamente.', 'success');
+                            resolve();
+                        },
+                        onError: (errs) => {
+                            const msg = getFirstErrorMessage(
+                                errs,
+                                'No se pudo eliminar. Verifica si tiene clases o registros asociados.'
+                            );
+                            setConfirmState((s) => ({
+                                ...s,
+                                title: 'No se pudo eliminar',
+                                message: msg,
+                                confirmText: 'Entendido',
+                            }));
+                            showToast(msg, 'error');
+                            resolve();
+                        },
+                    });
+                }),
+        });
     };
 
     const handleToggle = (instructor) => {
@@ -147,15 +198,22 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
             <Head title="Gestión de Instructores" />
 
             <div className="page-container">
+                {toast.open && (
+                    <div className={`toast ${toast.type}`} role="status" aria-live="polite">
+                        <div className="toast-title">
+                            {toast.type === 'error' ? 'No se pudo completar la acción' : 'Acción completada'}
+                        </div>
+                        <div className="toast-message">{toast.message}</div>
+                    </div>
+                )}
 
                 {/* Header */}
                 <div className="page-header">
                     <div>
                         <h1 className="page-title">INSTRUCTORES</h1>
-                        <p className="page-subtitle">Gestiona el equipo de instructores del box</p>
+                        <p className="page-subtitle">Gestión del equipo y perfiles de instructores</p>
                     </div>
-                    <button onClick={openCreateModal} className="btn-primary">
-                        <span>＋</span>
+                    <button type="button" onClick={openCreateModal} className="btn-primary">
                         Nuevo Instructor
                     </button>
                 </div>
@@ -163,16 +221,21 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                 {/* Search */}
                 <form onSubmit={handleSearch} className="search-form">
                     <div className="search-wrapper">
-                        <span className="search-icon">🔍</span>
+                        <span className="search-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="7" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
                         <input
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Buscar por nombre, email o especialidad..."
+                            placeholder="Buscar por nombre, correo o especialidad"
                             className="search-input"
                         />
                     </div>
-                    <button type="submit" className="btn-search">
+                    <button type="submit" className="btn-ghost">
                         Buscar
                     </button>
                 </form>
@@ -185,8 +248,8 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                             <tr>
                                 <th>Instructor</th>
                                 <th>Especialidades</th>
-                                <th className="text-center">💼 Tarifa por Clase</th>
-                                <th className="text-center">👥 Tarifa por Asistente</th>
+                                <th className="text-center">Tarifa por Clase</th>
+                                <th className="text-center">Tarifa por Asistente</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
@@ -195,7 +258,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                             {instructores.data.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="empty-state">
-                                        <span>👨‍🏫</span>
+                                        <span>Sin registros</span>
                                         <p>No hay instructores registrados</p>
                                     </td>
                                 </tr>
@@ -209,8 +272,8 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                                         <img src={instructor.foto_url} alt={instructor.user.name} />
                                                     ) : (
                                                         <span className="avatar-initial">
-                                                                {instructor.user.name.charAt(0).toUpperCase()}
-                                                            </span>
+                                                            {instructor.user.name.charAt(0).toUpperCase()}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div>
@@ -231,8 +294,8 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                                             className="esp-badge"
                                                             style={{ backgroundColor: tipo.color }}
                                                         >
-                                                                {tipo.nombre}
-                                                            </span>
+                                                            {tipo.nombre}
+                                                        </span>
                                                     ))
                                                 ) : (
                                                     <span className="text-muted">Sin especialidades</span>
@@ -247,27 +310,30 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                         </td>
                                         <td>
                                             <button
+                                                type="button"
                                                 onClick={() => handleToggle(instructor)}
                                                 className={`status-badge ${instructor.activo ? 'status-active' : 'status-inactive'}`}
                                             >
-                                                {instructor.activo ? '✓ Activo' : '✗ Inactivo'}
+                                                {instructor.activo ? 'Activo' : 'Inactivo'}
                                             </button>
                                         </td>
                                         <td>
                                             <div className="actions">
                                                 <button
+                                                    type="button"
                                                     onClick={() => openEditModal(instructor)}
-                                                    className="btn-icon btn-icon-edit"
+                                                    className="btn-action btn-blue"
                                                     title="Editar"
                                                 >
-                                                    ✏️
+                                                    Editar
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => handleDelete(instructor)}
-                                                    className="btn-icon btn-icon-delete"
+                                                    className="btn-action btn-red"
                                                     title="Eliminar"
                                                 >
-                                                    🗑️
+                                                    Eliminar
                                                 </button>
                                             </div>
                                         </td>
@@ -301,9 +367,9 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
 
                             <div className="modal-header">
                                 <h2 className="modal-title">
-                                    {editingInstructor ? '✏️ Editar Instructor' : '✨ Nuevo Instructor'}
+                                    {editingInstructor ? 'Editar Instructor' : 'Nuevo Instructor'}
                                 </h2>
-                                <button onClick={closeModal} className="btn-close">✕</button>
+                                <button type="button" onClick={closeModal} className="btn-close">×</button>
                             </div>
 
                             <form onSubmit={handleSubmit} className="modal-form-wrapper">
@@ -319,8 +385,8 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                                     <img src={previewFoto} alt="Preview" />
                                                 ) : (
                                                     <div className="foto-placeholder">
-                                                        <span>📷</span>
-                                                        <p>Sin foto</p>
+                                                        <span>Sin foto</span>
+                                                        <p>Subir imagen</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -483,7 +549,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                 </div>
 
                                 <div className="modal-footer">
-                                    <button type="button" onClick={closeModal} className="btn-cancel">
+                                    <button type="button" onClick={closeModal} className="btn-ghost">
                                         Cancelar
                                     </button>
                                     <button type="submit" disabled={isSubmitting} className="btn-primary">
@@ -495,76 +561,138 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                         </div>
                     </div>
                 )}
+
+                {/* Confirm Dialog */}
+                <ConfirmDialog
+                    open={confirmState.open}
+                    title={confirmState.title}
+                    message={confirmState.message}
+                    confirmText={confirmState.confirmText}
+                    cancelText={confirmState.cancelText}
+                    onConfirm={confirmState.onConfirm}
+                    onClose={closeConfirm}
+                    autoCloseOnConfirm={false}
+                />
             </div>
 
-            <style jsx>{`
+            <style>{`
                 * { box-sizing: border-box; }
+
+                /* eliminado :root con --pink / --pink-soft-modal para evitar errores de resolución */
 
                 .page-container {
                     max-width: 1400px;
                     margin: 0 auto;
                     padding: 0.5rem 0;
+                    position: relative;
                 }
 
-                /* ── Header ── */
                 .page-header {
                     display: flex;
-                    justify-content: space-between;
                     align-items: flex-start;
-                    margin-bottom: 1.75rem;
+                    justify-content: space-between;
                     gap: 1rem;
-                    flex-wrap: wrap;
+                    margin-bottom: 1rem;
+                }
+
+                .page-header .btn-primary {
+                    margin-left: auto;
+                    align-self: flex-start;
+                }
+
+                .toast {
+                    position: fixed;
+                    top: 1rem;
+                    right: 1rem;
+                    z-index: 1200;
+                    min-width: 280px;
+                    max-width: 420px;
+                    padding: 0.85rem 1rem;
+                    border-radius: 12px;
+                    backdrop-filter: blur(10px);
+                    border: 1px solid;
+                    box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+                    animation: toastIn .2s ease;
+                }
+
+                .toast.error {
+                    background: rgba(127, 29, 29, 0.88);
+                    border-color: rgba(248, 113, 113, 0.55);
+                    color: #fee2e2;
+                }
+
+                .toast.success {
+                    background: rgba(20, 83, 45, 0.88);
+                    border-color: rgba(74, 222, 128, 0.55);
+                    color: #dcfce7;
+                }
+
+                .toast-title {
+                    font-weight: 800;
+                    font-size: 0.8rem;
+                    margin-bottom: 0.2rem;
+                    text-transform: uppercase;
+                    letter-spacing: .4px;
+                }
+
+                .toast-message {
+                    font-size: 0.82rem;
+                    line-height: 1.35;
                 }
 
                 .page-title {
                     font-size: clamp(1.6rem, 4vw, 2.2rem);
                     font-weight: 900;
                     color: #FF1493;
-                    margin: 0;
-                    letter-spacing: 2px;
-                    text-shadow: 0 0 20px rgba(255,20,147,0.5), 0 0 40px rgba(255,20,147,0.2);
+                    margin: 0 0 0.25rem;
+                    letter-spacing: 1px;
+                    text-shadow: 0 0 12px rgba(255,20,147,0.45);
                 }
 
-                .page-subtitle {
-                    color: rgba(255,255,255,0.4);
-                    margin: 0.4rem 0 0;
-                    font-size: 0.875rem;
-                }
+                .page-subtitle { color: #777; margin: 0; font-size: 0.85rem; }
 
-                /* ── Buttons ── */
                 .btn-primary {
-                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
-                    color: #000;
-                    border: none;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 12px;
+                    background: rgba(255,20,147,0.18);
+                    border: 1px solid rgba(255,255,255,0.18);
+                    color: #FF1493;
+                    text-shadow: 0 0 8px rgba(255,20,147,0.35);
+                    padding: 0.875rem 1.5rem;
+                    border-radius: 10px;
                     font-weight: 900;
-                    font-size: 0.875rem;
                     cursor: pointer;
-                    transition: all 0.3s;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    box-shadow: 0 4px 20px rgba(255,20,147,0.4), 0 0 0 1px rgba(255,20,147,0.3);
-                    white-space: nowrap;
+                    transition: all 0.25s ease;
+                    backdrop-filter: blur(10px);
                 }
                 .btn-primary:hover:not(:disabled) {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 30px rgba(255,20,147,0.55);
+                    background: rgba(255,20,147,0.28);
+                    color: #fff;
+                    box-shadow: 0 0 20px rgba(255,20,147,0.35);
+                    transform: translateY(-1px);
                 }
-                .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+                .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
 
-                /* ── Search ── */
+                .btn-ghost {
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.35);
+                    color: #FF1493;
+                    padding: 0.875rem 1.5rem;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all .2s ease;
+                }
+                .btn-ghost:hover { background: rgba(255,20,147,0.14); }
+
                 .search-form {
                     display: flex;
-                    gap: 0.75rem;
+                    gap: 1rem;
                     margin-bottom: 1.5rem;
                     flex-wrap: wrap;
                 }
 
                 .search-wrapper {
                     flex: 1;
-                    min-width: 200px;
+                    min-width: 220px;
                     position: relative;
                     display: flex;
                     align-items: center;
@@ -573,216 +701,122 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                 .search-icon {
                     position: absolute;
                     left: 1rem;
+                    color: rgba(255,255,255,0.45);
+                    width: 16px; height: 16px;
                     pointer-events: none;
                 }
 
                 .search-input {
                     width: 100%;
                     padding: 0.875rem 1rem 0.875rem 2.75rem;
-                    background: rgba(255,20,147,0.04);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    border-radius: 12px;
+                    background: rgba(0,0,0,0.45);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-bottom: 1px solid rgba(255,20,147,0.3);
+                    border-radius: 10px;
                     color: #fff;
-                    font-size: 0.875rem;
-                    transition: all 0.3s;
+                    font-size: 0.9rem;
                     outline: none;
                 }
-                .search-input::placeholder { color: rgba(255,255,255,0.3); }
-                .search-input:focus {
-                    border-color: rgba(255,20,147,0.6);
-                    background: rgba(255,20,147,0.07);
-                    box-shadow: 0 0 0 3px rgba(255,20,147,0.1);
-                }
 
-                .btn-search {
-                    background: rgba(255,20,147,0.08);
-                    border: 1px solid rgba(255,20,147,0.4);
-                    color: #FF1493;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 12px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.25s;
-                    white-space: nowrap;
-                }
-                .btn-search:hover {
-                    background: rgba(255,20,147,0.18);
-                    border-color: #FF1493;
-                }
-
-                /* ── Glass Card ── */
                 .glass-card {
-                    background: rgba(255,20,147,0.03);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255,20,147,0.2);
+                    background: rgba(255,255,255,0.03);
+                    backdrop-filter: blur(22px);
+                    -webkit-backdrop-filter: blur(22px);
+                    border: 1px solid rgba(255,255,255,0.06);
+                    border-top: 1px solid rgba(255,255,255,0.12);
                     border-radius: 16px;
                     overflow: hidden;
-                    box-shadow:
-                        0 8px 32px rgba(0,0,0,0.4),
-                        inset 0 1px 0 rgba(255,20,147,0.1);
+                    box-shadow: 0 0 28px rgba(255,20,147,0.08), 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07);
                 }
 
                 .table-scroll { overflow-x: auto; }
 
-                /* ── Table ── */
-                .table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    min-width: 750px;
-                }
-
-                .table thead { background: rgba(255,20,147,0.07); }
-
+                .table { width: 100%; border-collapse: collapse; min-width: 760px; }
+                .table thead { background: rgba(255,20,147,0.05); }
                 .table th {
-                    padding: 1rem 1.25rem;
+                    padding: 1rem;
                     text-align: left;
-                    color: #FF1493;
-                    font-weight: 800;
-                    font-size: 0.68rem;
+                    color: rgba(255,20,147,0.85);
+                    font-weight: 900;
+                    font-size: 0.75rem;
                     text-transform: uppercase;
-                    letter-spacing: 1.5px;
-                    border-bottom: 1px solid rgba(255,20,147,0.2);
+                    letter-spacing: 1px;
+                    border-bottom: 1px solid rgba(255,20,147,0.18);
                     white-space: nowrap;
                 }
-
                 .table td {
-                    padding: 1rem 1.25rem;
-                    border-bottom: 1px solid rgba(255,20,147,0.07);
-                    color: rgba(255,255,255,0.75);
-                    font-size: 0.875rem;
+                    padding: 1rem;
+                    border-bottom: 1px solid rgba(255,255,255,0.04);
+                    color: rgba(255,255,255,0.82);
+                    font-size: 0.88rem;
                     vertical-align: middle;
                 }
-
-                .table tbody tr { transition: background 0.2s; }
                 .table tbody tr:hover { background: rgba(255,20,147,0.04); }
-                .table tbody tr:last-child td { border-bottom: none; }
 
                 .text-center { text-align: center !important; }
-                .text-muted { color: rgba(255,255,255,0.3); font-style: italic; font-size: 0.8rem; }
+                .text-muted { color: rgba(255,255,255,0.4); font-style: italic; font-size: 0.8rem; }
 
-                /* ── Instructor cell ── */
-                .instructor-cell {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.875rem;
-                }
-
+                .instructor-cell { display: flex; align-items: center; gap: .875rem; }
                 .instructor-avatar {
-                    width: 52px;
-                    height: 52px;
-                    border-radius: 50%;
-                    overflow: hidden;
-                    border: 2px solid rgba(255,20,147,0.4);
-                    box-shadow: 0 0 12px rgba(255,20,147,0.2);
-                    flex-shrink: 0;
-                    background: linear-gradient(135deg, #FF1493, #C71585);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    width: 44px; height: 44px; border-radius: 50%;
+                    overflow: hidden; flex-shrink: 0;
+                    border: 1px solid rgba(255,20,147,0.45);
+                    background: rgba(255,20,147,0.18);
+                    box-shadow: 0 0 12px rgba(255,20,147,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+                    display: flex; align-items: center; justify-content: center;
                 }
                 .instructor-avatar img { width: 100%; height: 100%; object-fit: cover; }
+                .avatar-initial { color: #FF1493; font-size: 1rem; font-weight: 900; }
 
-                .avatar-initial {
-                    color: #000;
-                    font-size: 1.4rem;
-                    font-weight: 900;
-                }
+                .instructor-name { color: #fff; font-weight: 700; margin: 0 0 .2rem; font-size: .9rem; }
+                .instructor-email { color: rgba(255,255,255,0.4); margin: 0 0 .2rem; font-size: .78rem; }
+                .instructor-spec { color: rgba(255,20,147,0.9); margin: 0; font-size: .72rem; }
 
-                .instructor-name {
-                    color: #fff;
-                    font-weight: 700;
-                    margin: 0 0 0.2rem;
-                    font-size: 0.9rem;
-                }
-                .instructor-email {
-                    color: rgba(255,255,255,0.4);
-                    margin: 0 0 0.2rem;
-                    font-size: 0.78rem;
-                }
-                .instructor-spec {
-                    color: #FF1493;
-                    margin: 0;
-                    font-size: 0.72rem;
-                    font-style: italic;
-                }
-
-                /* ── Badges ── */
-                .badges-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
+                .badges-wrap { display: flex; flex-wrap: wrap; gap: .4rem; }
                 .esp-badge {
                     display: inline-block;
-                    padding: 0.3rem 0.65rem;
-                    border-radius: 6px;
+                    padding: .3rem .65rem;
+                    border-radius: 999px;
                     color: #fff;
                     font-weight: 700;
-                    font-size: 0.7rem;
-                    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    font-size: .7rem;
+                    text-shadow: 0 1px 2px rgba(0,0,0,.45);
                 }
 
-                .tarifa-value {
-                    color: #FF1493;
-                    font-weight: 700;
-                    font-size: 0.875rem;
-                }
-                .tarifa-empty {
-                    color: rgba(255,255,255,0.25);
-                    font-style: italic;
-                    font-size: 0.78rem;
-                }
+                .tarifa-value { color: rgba(255,20,147,0.95); font-weight: 700; font-size: .875rem; }
+                .tarifa-empty { color: rgba(255,255,255,.25); font-style: italic; font-size: .78rem; }
 
                 .status-badge {
                     padding: 0.4rem 0.875rem;
                     border-radius: 8px;
                     font-weight: 700;
                     font-size: 0.72rem;
-                    border: none;
                     cursor: pointer;
-                    transition: all 0.25s;
                     white-space: nowrap;
                 }
-                .status-active {
-                    background: rgba(34,197,94,0.15);
-                    color: #22c55e;
-                    border: 1px solid rgba(34,197,94,0.35);
-                }
-                .status-inactive {
-                    background: rgba(239,68,68,0.15);
-                    color: #ef4444;
-                    border: 1px solid rgba(239,68,68,0.35);
-                }
+                .status-active { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.35); }
+                .status-inactive { background: rgba(107,114,128,0.12); color: #9ca3af; border: 1px solid rgba(107,114,128,0.35); }
 
-                .actions { display: flex; gap: 0.5rem; }
-
-                .btn-icon {
-                    background: rgba(255,255,255,0.04);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    padding: 0.4rem 0.6rem;
+                .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+                .btn-action {
+                    padding: 0.45rem 0.7rem;
                     border-radius: 8px;
-                    font-size: 1rem;
+                    font-size: 0.75rem;
+                    font-weight: 800;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.3);
+                    color: rgba(255,20,147,0.95);
                 }
-                .btn-icon-edit:hover {
-                    background: rgba(59,130,246,0.15);
-                    border-color: #3b82f6;
-                }
-                .btn-icon-delete:hover {
-                    background: rgba(239,68,68,0.15);
-                    border-color: #ef4444;
-                }
+                .btn-blue { border-color: rgba(255,20,147,0.3); color: rgba(255,20,147,0.95); background: rgba(255,20,147,0.08); }
+                .btn-red { border-color: rgba(239,68,68,0.6); color: #ef4444; background: rgba(239,68,68,0.08); }
 
                 .empty-state {
                     text-align: center;
-                    padding: 3.5rem 1rem !important;
-                    color: rgba(255,255,255,0.25) !important;
+                    padding: 3rem 1rem !important;
+                    color: #666 !important;
                 }
-                .empty-state span { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
-                .empty-state p { margin: 0; }
 
-                /* ── Pagination ── */
                 .pagination {
                     display: flex;
                     justify-content: center;
@@ -792,57 +826,46 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                 }
 
                 .page-btn {
-                    background: rgba(255,20,147,0.07);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    color: #FF1493;
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.25);
+                    color: rgba(255,20,147,0.9);
                     padding: 0.5rem 0.875rem;
                     border-radius: 8px;
                     cursor: pointer;
                     transition: all 0.2s;
-                    font-weight: 600;
+                    font-weight: 700;
                     font-size: 0.8rem;
                 }
-                .page-btn:hover:not(:disabled) { background: rgba(255,20,147,0.18); border-color: #FF1493; }
-                .page-btn.active { background: #FF1493; color: #000; border-color: #FF1493; }
-                .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+                .page-btn:hover:not(:disabled) { background: rgba(255,20,147,0.16); }
+                .page-btn.active { background: rgba(255,20,147,0.28); color: #fff; border-color: rgba(255,20,147,0.6); }
+                .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-                /* ── Modal ── */
+                /* Modal rosa (basado en Clientes) */
                 .modal-overlay {
                     position: fixed;
                     inset: 0;
-                    background: rgba(0,0,0,0.75);
-                    backdrop-filter: blur(6px);
-                    -webkit-backdrop-filter: blur(6px);
+                    background: rgba(0,0,0,0.6);
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    padding: 1.2rem;
                     z-index: 1000;
-                    padding: 1rem;
                 }
 
                 .modal-glass {
-                    background: rgba(10, 3, 15, 0.88);
-                    backdrop-filter: blur(30px);
-                    -webkit-backdrop-filter: blur(30px);
-                    border: 1px solid rgba(255,20,147,0.35);
-                    border-radius: 20px;
                     width: 100%;
                     max-width: 680px;
                     height: 90vh;
                     max-height: 90vh;
                     display: flex;
                     flex-direction: column;
-                    box-shadow:
-                        0 30px 80px rgba(0,0,0,0.7),
-                        0 0 60px rgba(255,20,147,0.15),
-                        inset 0 1px 0 rgba(255,20,147,0.2);
                     overflow: hidden;
-                    animation: modalIn 0.25s cubic-bezier(.34,1.56,.64,1);
-                }
-
-                @keyframes modalIn {
-                    from { opacity: 0; transform: scale(0.92) translateY(20px); }
-                    to { opacity: 1; transform: scale(1) translateY(0); }
+                    border-radius: 14px;
+                    background: rgba(18,10,20,0.96);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-top: 2px solid #e754a6;
+                    box-shadow: 0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(231,84,166,0.18);
+                    animation: popIn 0.18s ease;
                 }
 
                 .modal-header {
@@ -850,141 +873,77 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 1.5rem 1.75rem;
-                    border-bottom: 1px solid rgba(255,20,147,0.15);
-                    background: rgba(255,20,147,0.04);
+                    padding: 1rem 1.25rem;
+                    border-bottom: 1px solid rgba(255,255,255,0.06);
                 }
 
-                .modal-title {
-                    color: #FF1493;
-                    font-size: 1.2rem;
-                    font-weight: 900;
-                    margin: 0;
-                }
+                .modal-title { color: #fff; font-size: 1.05rem; font-weight: 900; margin: 0; }
 
                 .btn-close {
-                    background: rgba(255,255,255,0.06);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    color: rgba(255,255,255,0.5);
-                    font-size: 1rem;
+                    background: transparent;
+                    border: none;
+                    color: #999;
+                    font-size: 1.1rem;
                     cursor: pointer;
-                    transition: all 0.2s;
-                    width: 32px; height: 32px;
-                    border-radius: 8px;
-                    display: flex; align-items: center; justify-content: center;
-                }
-                .btn-close:hover {
-                    color: #FF1493;
-                    border-color: rgba(255,20,147,0.4);
-                    background: rgba(255,20,147,0.1);
-                    transform: rotate(90deg);
                 }
 
-                .modal-form-wrapper {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                    min-height: 0;
-                }
-
-                .modal-body {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 1.5rem 1.75rem;
-                    min-height: 0;
-                }
+                .modal-form-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+                .modal-body { flex: 1; overflow-y: auto; padding: 1.25rem; min-height: 0; }
 
                 .modal-footer {
                     flex-shrink: 0;
                     display: flex;
                     justify-content: flex-end;
                     gap: 0.75rem;
-                    padding: 1.25rem 1.75rem;
-                    border-top: 1px solid rgba(255,20,147,0.15);
-                    background: rgba(255,20,147,0.03);
+                    padding: 1rem 1.25rem;
+                    border-top: 1px solid rgba(255,255,255,0.06);
                     flex-wrap: wrap;
                 }
 
-                /* ── Form ── */
-                .form-group { margin-bottom: 1.25rem; }
-
-                .form-row {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1rem;
-                }
+                .form-group { margin-bottom: 1rem; }
+                .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
                 .form-label {
                     display: block;
-                    color: rgba(255,20,147,0.9);
+                    color: #FF1493;
                     font-size: 0.7rem;
                     font-weight: 700;
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 6px;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                 }
 
-                .label-hint {
-                    color: rgba(255,255,255,0.3);
-                    font-size: 0.7rem;
-                    font-weight: 400;
-                    text-transform: none;
-                    margin-left: 0.5rem;
-                }
+                .label-hint { color: #777; font-size: 0.68rem; font-weight: 400; text-transform: none; margin-left: 0.5rem; }
 
                 .form-input, .form-textarea {
                     width: 100%;
-                    padding: 0.875rem 1rem;
-                    background: rgba(255,20,147,0.05);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    border-radius: 10px;
+                    padding: 0.875rem;
+                    background: #000;
+                    border: 2px solid rgba(255,20,147,0.3);
+                    border-radius: 8px;
                     color: #fff;
                     font-size: 0.875rem;
-                    transition: all 0.25s;
                     outline: none;
                 }
                 .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.25); }
-                .form-input:focus, .form-textarea:focus {
-                    border-color: rgba(255,20,147,0.6);
-                    background: rgba(255,20,147,0.08);
-                    box-shadow: 0 0 0 3px rgba(255,20,147,0.1);
-                }
                 .form-textarea { resize: vertical; font-family: inherit; }
 
-                .form-error {
-                    color: #ef4444;
-                    font-size: 0.75rem;
-                    margin: 0.4rem 0 0;
-                }
+                .form-error { color: #ef4444; font-size: 0.75rem; margin: 0.35rem 0 0; }
 
-                /* Foto */
-                .foto-row {
-                    display: flex;
-                    align-items: center;
-                    gap: 1rem;
-                    flex-wrap: wrap;
-                }
-
+                .foto-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
                 .foto-preview {
-                    width: 88px;
-                    height: 88px;
-                    border-radius: 50%;
-                    overflow: hidden;
-                    border: 2px solid rgba(255,20,147,0.3);
+                    width: 88px; height: 88px; border-radius: 50%; overflow: hidden;
+                    border: 2px solid rgba(255,20,147,0.35);
+                    background: rgba(255,20,147,0.08);
                     flex-shrink: 0;
-                    background: rgba(255,20,147,0.07);
                 }
                 .foto-preview img { width: 100%; height: 100%; object-fit: cover; }
 
                 .foto-placeholder {
                     width: 100%; height: 100%;
-                    display: flex; flex-direction: column;
-                    align-items: center; justify-content: center;
-                    color: rgba(255,255,255,0.3);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    color: rgba(255,255,255,0.4);
                 }
-                .foto-placeholder span { font-size: 1.75rem; }
-                .foto-placeholder p { margin: 0.25rem 0 0; font-size: 0.7rem; }
 
                 .hidden-input { display: none; }
 
@@ -997,17 +956,13 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     font-weight: 700;
                     font-size: 0.8rem;
                     cursor: pointer;
-                    transition: all 0.2s;
                 }
-                .btn-upload:hover { background: rgba(255,20,147,0.16); }
 
-                /* Tipos grid */
                 .tipos-grid {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
                     gap: 0.6rem;
                 }
-
                 .tipo-option { cursor: pointer; }
 
                 .tipo-badge {
@@ -1022,69 +977,40 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     transition: all 0.2s;
                     text-shadow: 0 1px 3px rgba(0,0,0,0.5);
                 }
-                .tipo-option:hover .tipo-badge { transform: scale(1.04); }
 
-                /* Prefix input */
-                .input-prefix-wrap {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                }
+                .input-prefix-wrap { position: relative; display: flex; align-items: center; }
                 .input-prefix-symbol {
-                    position: absolute;
-                    left: 1rem;
-                    color: #FF1493;
-                    font-weight: 700;
-                    pointer-events: none;
+                    position: absolute; left: 1rem;
+                    color: #FF1493; font-weight: 700; pointer-events: none;
                 }
                 .form-input-prefixed { padding-left: 2.25rem; }
 
-                /* Toggle */
                 .toggle-label {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    color: rgba(255,255,255,0.65);
-                    cursor: pointer;
-                    font-size: 0.875rem;
-                    font-weight: 600;
+                    display: flex; align-items: center; gap: 0.75rem;
+                    color: rgba(255,255,255,0.7);
+                    cursor: pointer; font-size: 0.875rem; font-weight: 600;
                 }
-                .toggle-checkbox {
-                    width: 18px; height: 18px;
-                    accent-color: #FF1493;
-                    cursor: pointer;
-                }
+                .toggle-checkbox { width: 18px; height: 18px; accent-color: #FF1493; cursor: pointer; }
 
-                .btn-cancel {
-                    background: rgba(255,20,147,0.06);
-                    border: 1px solid rgba(255,20,147,0.25);
-                    color: #FF1493;
-                    padding: 0.75rem 1.25rem;
-                    border-radius: 10px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    font-size: 0.875rem;
-                }
-                .btn-cancel:hover { background: rgba(255,20,147,0.12); }
-
-                /* ── Responsive ── */
                 @media (max-width: 768px) {
-                    .page-header { flex-direction: column; align-items: flex-start; }
-                    .btn-primary { width: 100%; justify-content: center; }
+                    .page-header { flex-direction: column; align-items: stretch; }
+                    .page-header .btn-primary { margin-left: 0; width: 100%; }
+                    .btn-primary, .btn-ghost { width: 100%; justify-content: center; }
                     .search-form { flex-direction: column; }
-                    .btn-search { width: 100%; }
                     .form-row { grid-template-columns: 1fr; }
-                    .tipos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
                     .modal-footer { flex-direction: column; }
-                    .btn-cancel, .btn-primary { width: 100%; justify-content: center; }
                 }
 
                 @media (max-width: 480px) {
-                    .modal-glass { border-radius: 16px; }
-                    .instructor-avatar { width: 42px; height: 42px; }
-                    .avatar-initial { font-size: 1.1rem; }
+                    .modal-glass { border-radius: 12px; }
+                    .table { min-width: 680px; }
                 }
+
+                @keyframes toastIn {
+                    from { opacity: 0; transform: translateY(-6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes popIn { from{opacity:0;transform:scale(0.98)} to{opacity:1;transform:scale(1)} }
             `}</style>
         </DashboardLayout>
     );

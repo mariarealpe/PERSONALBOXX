@@ -45,10 +45,10 @@ function calcEstadoActual(clase) {
 }
 
 const estadoConfig = {
-    programada: { bg:'rgba(59,130,246,0.18)', border:'#3b82f6', text:'#60a5fa', label:'Programada', icon:'🔵' },
-    en_curso:   { bg:'rgba(34,197,94,0.18)',  border:'#22c55e', text:'#4ade80', label:'En Curso',   icon:'🟢' },
-    finalizada: { bg:'rgba(107,114,128,0.18)',border:'#6b7280', text:'#9ca3af', label:'Finalizada', icon:'⚪' },
-    cancelada:  { bg:'rgba(239,68,68,0.18)',  border:'#ef4444', text:'#f87171', label:'Cancelada',  icon:'🔴' },
+    programada: { bg:'rgba(59,130,246,0.18)', border:'#3b82f6', text:'#60a5fa', label:'Programada' },
+    en_curso:   { bg:'rgba(34,197,94,0.18)',  border:'#22c55e', text:'#4ade80', label:'En Curso'   },
+    finalizada: { bg:'rgba(107,114,128,0.18)',border:'#6b7280', text:'#9ca3af', label:'Finalizada' },
+    cancelada:  { bg:'rgba(239,68,68,0.18)',  border:'#ef4444', text:'#f87171', label:'Cancelada'  },
 };
 
 const toDatetimeLocal = v => {
@@ -287,8 +287,8 @@ function ClaseCard({ clase, onEdit, onDelete, onNavigate, showDate = false }) {
                             <span className="ccard-date">{fmtFechaCorta(clase.fecha_hora_inicio)}</span>
                         )}
                         <span className="ccard-time">{fmtHora(clase.fecha_hora_inicio)} — {fmtHora(clase.fecha_hora_fin)}</span>
-                        <span className="ccard-instr">👨‍🏫 {clase.instructor?.name ?? '—'}</span>
-                        {clase.sala && <span className="ccard-sala">📍 {clase.sala}</span>}
+                        <span className="ccard-instr">{clase.instructor?.name ?? '—'}</span>
+                        {clase.sala && <span className="ccard-sala">{clase.sala}</span>}
                     </div>
                     <div className="ccard-meta">
                         <span className="ccard-badge" style={{ background:est.bg, color:est.text, border:`1px solid ${est.border}40` }}>
@@ -312,20 +312,22 @@ function ClaseCard({ clase, onEdit, onDelete, onNavigate, showDate = false }) {
 
                 <div className="ccard-acts" onClick={e => e.stopPropagation()}>
                     {esEditable ? (
-                        <button className="cact cact-edit" onClick={() => onEdit(clase)}>✏️ Editar</button>
+                        <button className="cact cact-edit" onClick={() => onEdit(clase)}>Editar</button>
                     ) : (
                         <span className="cact-blocked" title={
                             estadoReal === 'en_curso'   ? 'No se puede editar una clase en curso' :
                                 estadoReal === 'finalizada' ? 'Clase finalizada — se eliminará al liquidar' : ''
                         }>
-                            {estadoReal === 'en_curso'   ? '🟢 En curso'    : ''}
-                            {estadoReal === 'finalizada' ? '🔒 Finalizada'  : ''}
+                            {estadoReal === 'en_curso'   ? 'En curso'   : ''}
+                            {estadoReal === 'finalizada' ? 'Finalizada' : ''}
                         </span>
                     )}
                     {esEliminable ? (
-                        <button className="cact cact-del" onClick={() => onDelete(clase)}>🗑️</button>
+                        <button className="cact cact-del" onClick={() => onDelete(clase)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{width:13,height:13}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
                     ) : estadoReal === 'finalizada' ? (
-                        <span className="cact-lock" title="Se elimina al registrar el pago de liquidación">💰 Liquidar</span>
+                        <span className="cact-lock" title="Se elimina al registrar el pago de liquidación">Liquidar</span>
                     ) : null}
                 </div>
             </div>
@@ -356,7 +358,7 @@ function ClaseModal({ clase, tiposClase, instructores, onClose }) {
         <div className="moverlay" onClick={onClose}>
             <div className="mglass" onClick={e => e.stopPropagation()}>
                 <div className="mhd">
-                    <h2 className="mhd-title">{editando ? '✏️ Editar Clase' : '✨ Nueva Clase'}</h2>
+                    <h2 className="mhd-title">{editando ? 'Editar Clase' : 'Nueva Clase'}</h2>
                     <button className="mclose" onClick={onClose}>✕</button>
                 </div>
                 <form onSubmit={handleSubmit} className="mform">
@@ -570,11 +572,11 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
                     <button
                         className={`mtab ${mainView === 'calendario' ? 'act' : ''}`}
                         onClick={() => setMainView('calendario')}
-                    >📅 Calendario</button>
+                    >Calendario</button>
                     <button
                         className={`mtab ${mainView === 'todas' ? 'act' : ''}`}
                         onClick={() => setMainView('todas')}
-                    >📋 Todas las Clases</button>
+                    >Todas las Clases</button>
                 </div>
 
                 {/* ══════════════════════════════════════════════
@@ -642,7 +644,9 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
                                 <div className="clases-list">
                                     {clasesDia.length === 0 ? (
                                         <div className="empty-day">
-                                            <span className="empty-ico">📅</span>
+                                            <span className="empty-ico">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{width:40,height:40,color:'rgba(255,20,147,0.35)'}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            </span>
                                             <p className="empty-txt">Sin clases este día</p>
                                             <button className="btn-new-sm" onClick={() => { setEditingClase(null); setShowModal(true); }}>
                                                 ＋ Crear clase
@@ -704,22 +708,24 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
                         {/* Info de restricciones */}
                         <div className="restricciones-info">
                             <span className="rinfo-item">
-                                <span style={{ color:'#4ade80' }}>🟢</span> Las clases <strong>En Curso</strong> no se pueden editar ni eliminar
+                                <span className="rinfo-dot" style={{ background:'#22c55e' }} /> Las clases <strong>En Curso</strong> no se pueden editar ni eliminar
                             </span>
                             <span className="rinfo-sep">·</span>
                             <span className="rinfo-item">
-                                <span>⚪</span> Las clases <strong>Finalizadas</strong> se eliminan al liquidar al instructor
+                                <span className="rinfo-dot" style={{ background:'#6b7280' }} /> Las clases <strong>Finalizadas</strong> se eliminan al liquidar al instructor
                             </span>
                             <span className="rinfo-sep">·</span>
                             <span className="rinfo-item">
-                                <span style={{ color:'#60a5fa' }}>⏱️</span> Los estados cambian <strong>automáticamente</strong> según el horario
+                                <span className="rinfo-dot" style={{ background:'#60a5fa' }} /> Los estados cambian <strong>automáticamente</strong> según el horario
                             </span>
                         </div>
 
                         {/* Lista */}
                         {todasClases.length === 0 ? (
                             <div className="empty-day" style={{ marginTop:'1rem' }}>
-                                <span className="empty-ico">📋</span>
+                                <span className="empty-ico">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{width:40,height:40,color:'rgba(255,20,147,0.35)'}}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+                                </span>
                                 <p className="empty-txt">No hay clases que coincidan con los filtros</p>
                             </div>
                         ) : (
@@ -881,6 +887,7 @@ export default function ClasesIndex({ auth, clases, tiposClase, instructores, fi
 .rinfo-item { display:flex; align-items:center; gap:0.35rem; }
 .rinfo-item strong { color:rgba(255,255,255,0.75); }
 .rinfo-sep { color:rgba(255,255,255,0.2); }
+.rinfo-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
 .todas-list { display:flex; flex-direction:column; gap:0.75rem; }
 

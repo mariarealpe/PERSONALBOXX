@@ -19,7 +19,16 @@ const ESTADO_CLASE = {
 
 function Stat({ label, value, color }) {
     return (
-        <div style={{ background: 'rgba(10,10,10,0.9)', border: `2px solid ${color}44`, borderRadius: 10, padding: '1rem 1.25rem', textAlign: 'center' }}>
+        <div style={{
+            position: 'relative', overflow: 'hidden', textAlign: 'center',
+            background: 'rgba(255,255,255,0.04)',
+            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderTop: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: 12, padding: '1rem 1.25rem',
+            boxShadow: `0 0 20px ${color}14, 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)`,
+        }}>
+            <div style={{ position:'absolute', top:0, left:0, right:0, height:'1px', background:`linear-gradient(90deg,transparent,rgba(255,255,255,0.1) 30%,${color}55 50%,rgba(255,255,255,0.1) 70%,transparent)`, pointerEvents:'none' }} />
             <div style={{ color, fontSize: '1.75rem', fontWeight: 900, lineHeight: 1 }}>{value}</div>
             <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, marginTop: 4 }}>{label}</div>
         </div>
@@ -67,7 +76,15 @@ export default function ClaseShow({ auth, clase, reservas, resumen }) {
                 </Link>
 
                 {/* Header de la clase */}
-                <div style={{ background: 'rgba(10,10,10,0.95)', border: `2px solid ${C}33`, borderRadius: 14, overflow: 'hidden', marginBottom: '1.5rem' }}>
+                <div style={{
+                    position: 'relative', overflow: 'hidden', marginBottom: '1.5rem',
+                    background: 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(22px)', WebkitBackdropFilter: 'blur(22px)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderTop: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 16,
+                    boxShadow: `0 0 32px ${C}0e, 0 12px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)`,
+                }}>
                     <div style={{ height: 5, background: clase.tipo_clase?.color ?? C }} />
                     <div style={{ padding: '1.5rem 2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
@@ -80,13 +97,13 @@ export default function ClaseShow({ auth, clase, reservas, resumen }) {
                                 </p>
                                 <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                                     <span style={{ color: '#888', fontSize: '0.85rem' }}>
-                                        📍 {clase.sala ?? 'Sin sala'}
+                                        {clase.sala ?? 'Sin sala'}
                                     </span>
                                     <span style={{ color: '#888', fontSize: '0.85rem' }}>
-                                        👨‍🏫 {clase.instructor?.name ?? 'Sin instructor'}
+                                        {clase.instructor?.name ?? 'Sin instructor'}
                                     </span>
                                     <span style={{ color: '#888', fontSize: '0.85rem' }}>
-                                        🪑 Capacidad: {clase.capacidad_maxima}
+                                        Capacidad: {clase.capacidad_maxima}
                                     </span>
                                 </div>
                             </div>
@@ -128,7 +145,10 @@ export default function ClaseShow({ auth, clase, reservas, resumen }) {
 
                 {/* Si no hay ninguna reserva */}
                 {reservas.length === 0 && (
-                    <div style={{ background: 'rgba(10,10,10,0.9)', border: '2px solid rgba(255,20,147,0.15)', borderRadius: 12, padding: '3rem', textAlign: 'center' }}>
+                    <div style={{
+                        background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                        border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 14, padding: '3rem', textAlign: 'center',
+                    }}>
                         <p style={{ color: '#555', margin: 0 }}>No hay reservas registradas para esta clase.</p>
                     </div>
                 )}
@@ -145,7 +165,14 @@ export default function ClaseShow({ auth, clase, reservas, resumen }) {
                                 <span style={{ color: '#555', fontSize: '0.8rem' }}>{lista.length} persona{lista.length !== 1 ? 's' : ''}</span>
                             </div>
 
-                            <div style={{ background: 'rgba(10,10,10,0.9)', border: `1px solid ${cfg.color}22`, borderRadius: 12, overflow: 'hidden' }}>
+                            <div style={{
+                            overflow: 'hidden', borderRadius: 12,
+                            background: 'rgba(255,255,255,0.03)',
+                            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderTop: '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: `0 0 20px ${cfg.color}08, 0 8px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)`,
+                        }}>
                                 {lista.map((r, idx) => (
                                     <div
                                         key={r.id}

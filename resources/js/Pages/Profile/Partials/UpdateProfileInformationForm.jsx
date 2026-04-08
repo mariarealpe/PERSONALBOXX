@@ -1,16 +1,38 @@
 import { Link, useForm, router } from '@inertiajs/react';
-import { Transition } from '@headlessui/react';
 import { useState } from 'react';
 
-export default function UpdateProfileInformationForm({ mustVerifyEmail, status, user }) {
+const Ico = {
+    user: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+    ),
+    camera: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-2h6l2 2h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+        </svg>
+    ),
+    check: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5"/>
+        </svg>
+    ),
+};
+
+export default function UpdateProfileInformationForm({ mustVerifyEmail, status, user, emailChange }) {
+    const pendingEmail = emailChange?.pending_email || null;
+    const isEmailPending = !!emailChange?.pending;
+
     const [previewFoto, setPreviewFoto] = useState(user.foto_url || null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [savedOk, setSavedOk] = useState(false);
 
     const { data, setData, errors, setError, clearErrors } = useForm({
         name: user.name,
-        email: user.email,
+        email: pendingEmail ?? user.email,
         foto: null,
+        otp: '',
     });
 
     const handleFotoChange = (e) => {
@@ -31,6 +53,7 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
         formData.append('name', data.name);
         formData.append('email', data.email);
         if (data.foto) formData.append('foto', data.foto);
+        if (data.otp) formData.append('otp', data.otp);
         formData.append('_method', 'PATCH');
 
         setIsSubmitting(true);
@@ -52,7 +75,7 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
     return (
         <section className="profile-card">
             <div className="card-header">
-                <span className="card-icon">👤</span>
+                <span className="card-icon" aria-hidden>{Ico.user}</span>
                 <div>
                     <h2 className="card-title">Información Personal</h2>
                     <p className="card-desc">Actualiza tu foto, nombre y correo electrónico</p>
@@ -87,10 +110,14 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                             className="foto-input-hidden"
                         />
                         <label htmlFor="foto-input" className="btn-foto">
-                            📷 Cambiar foto
+                            <span className="btn-foto-icon">{Ico.camera}</span>
+                            Cambiar foto
                         </label>
                         {previewFoto && previewFoto !== user.foto_url && (
-                            <span className="foto-nueva-badge">✓ Nueva foto seleccionada</span>
+                            <span className="foto-nueva-badge">
+                                <span className="ok-icon">{Ico.check}</span>
+                                Nueva foto seleccionada
+                            </span>
                         )}
                     </div>
                 </div>
@@ -113,6 +140,13 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                 {/* ── Email ── */}
                 <div className="form-group">
                     <label className="label">Correo electrónico</label>
+
+                    <div className="email-status-row">
+                        <span className={`email-badge ${isEmailPending ? 'email-badge-pending' : 'email-badge-ok'}`}>
+                            {isEmailPending ? 'Pendiente de aprobación del correo' : 'Listo'}
+                        </span>
+                    </div>
+
                     <input
                         type="email"
                         value={data.email}
@@ -122,52 +156,74 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                         autoComplete="username"
                     />
                     {errors.email && <p className="error-msg">{errors.email}</p>}
+
+                    {status === 'email-change-otp-sent' && (
+                        <p className="verify-sent">Te enviamos un código 2FA al nuevo correo para confirmar el cambio.</p>
+                    )}
+                    {status === 'email-change-confirmed' && (
+                        <p className="verify-sent">Correo actualizado y verificación aplicada correctamente.</p>
+                    )}
                 </div>
 
-                {mustVerifyEmail && user.email_verified_at === null && (
-                    <div className="verify-notice">
-                        <p>
-                            Tu correo no está verificado.{' '}
-                            <Link href={route('verification.send')} method="post" as="button" className="verify-link">
-                                Reenviar verificación →
-                            </Link>
-                        </p>
-                        {status === 'verification-link-sent' && (
-                            <p className="verify-sent">✓ Enlace de verificación enviado.</p>
-                        )}
+                {isEmailPending && (
+                    <div className="form-group">
+                        <label className="label">Código 2FA (6 dígitos)</label>
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={data.otp}
+                            onChange={(e) => setData('otp', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            className={`neon-input${errors.otp ? ' input-error' : ''}`}
+                            placeholder="Ingresa el código"
+                        />
+                        {errors.otp && <p className="error-msg">{errors.otp}</p>}
                     </div>
                 )}
 
                 <div className="card-footer">
                     <button type="submit" disabled={isSubmitting} className="btn-save">
-                        {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                        {isSubmitting
+                            ? 'Guardando...'
+                            : isEmailPending
+                                ? 'Confirmar cambio de correo'
+                                : 'Guardar Cambios'}
                     </button>
-                    {savedOk && <span className="saved-badge">✓ Guardado</span>}
+                    {savedOk && (
+                        <span className="saved-badge">
+                            <span className="ok-icon">{Ico.check}</span>
+                            Guardado
+                        </span>
+                    )}
                 </div>
             </form>
 
             <style>{`
                 .profile-card {
-                    background: rgba(10,10,10,0.95);
-                    border: 2px solid rgba(255,20,147,0.25);
+                    background: rgba(255,255,255,0.03);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-top: 1px solid rgba(255,255,255,0.14);
                     border-radius: 14px;
                     overflow: hidden;
-                    box-shadow: 0 0 30px rgba(255,20,147,0.06);
+                    box-shadow: 0 0 24px rgba(255,20,147,0.08), 0 8px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
                     transition: border-color 0.3s;
                 }
-                .profile-card:hover { border-color: rgba(255,20,147,0.45); }
+                .profile-card:hover { border-color: rgba(255,20,147,0.35); }
+
                 .card-header {
                     display: flex; align-items: center; gap: 1rem; padding: 1.5rem;
                     border-bottom: 1px solid rgba(255,20,147,0.15);
                     background: rgba(255,20,147,0.04);
                 }
-                .card-icon { font-size: 1.75rem; flex-shrink: 0; }
+                .card-icon { width: 22px; height: 22px; color: #FF1493; display: inline-flex; flex-shrink: 0; }
+                .card-icon svg { width: 100%; height: 100%; }
                 .card-title {
                     color: #FF1493; font-size: 1.1rem; font-weight: 900;
                     margin: 0 0 0.2rem 0; letter-spacing: 1px; text-transform: uppercase;
                 }
                 .card-desc { color: #666; font-size: 0.8rem; margin: 0; }
-                .card-form { padding: 1.75rem; display: flex; flex-direction: column; gap: 1.25rem; }
+                .card-form { padding: 1.15rem 1.3rem 1.3rem; display: flex; flex-direction: column; gap: 1rem; }
 
                 /* ── Foto ── */
                 .foto-section {
@@ -216,7 +272,9 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                 .foto-hint { color: #555; font-size: 0.75rem; margin: 0; }
                 .foto-input-hidden { display: none; }
                 .btn-foto {
-                    display: inline-block;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: .4rem;
                     background: rgba(255,20,147,0.1);
                     border: 2px solid rgba(255,20,147,0.5);
                     color: #FF1493;
@@ -232,9 +290,16 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                     background: #FF1493; color: #000;
                     box-shadow: 0 0 15px rgba(255,20,147,0.4);
                 }
-                .foto-nueva-badge {
-                    color: #22c55e; font-size: 0.75rem; font-weight: 700;
+                .btn-foto-icon { width: 14px; height: 14px; display: inline-flex; }
+
+                .foto-nueva-badge,
+                .saved-badge,
+                .verify-sent {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: .35rem;
                 }
+                .ok-icon { width: 14px; height: 14px; display: inline-flex; }
 
                 /* ── Inputs ── */
                 .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -289,8 +354,34 @@ export default function UpdateProfileInformationForm({ mustVerifyEmail, status, 
                 }
                 .verify-sent { color: #22c55e; margin-top: 0.5rem; font-size: 0.8rem; }
 
-                @media (max-width: 480px) {
-                    .foto-section { flex-direction: column; align-items: flex-start; }
+                .email-status-row { margin-bottom: 0.4rem; }
+                .email-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: .22rem .6rem;
+                    border-radius: 999px;
+                    font-size: .72rem;
+                    font-weight: 800;
+                    letter-spacing: .2px;
+                }
+                .email-badge-ok {
+                    color: #22c55e;
+                    background: rgba(34,197,94,.1);
+                    border: 1px solid rgba(34,197,94,.35);
+                }
+                .email-badge-pending {
+                    color: #f59e0b;
+                    background: rgba(245,158,11,.1);
+                    border: 1px solid rgba(245,158,11,.35);
+                }
+
+                @media (max-width: 640px) {
+                    .card-header { padding: 1rem; }
+                    .card-form { padding: 1rem; }
+                    .foto-section { flex-direction: column; align-items: flex-start; gap: .9rem; padding: .9rem; }
+                    .foto-preview-wrap, .foto-preview-img, .foto-placeholder { width: 78px; height: 78px; }
+                    .foto-placeholder-letter { font-size: 1.9rem; }
+                    .btn-save { width: 100%; }
                 }
             `}</style>
         </section>

@@ -1,11 +1,44 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useState } from 'react';
+import ConfirmDialog from '@/Components/ConfirmDialog';
+
+function Icon({ name, size = 16 }) {
+    const c = {
+        width: size,
+        height: size,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.8,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': true,
+    };
+    const icons = {
+        plus: <svg {...c}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>,
+        search: <svg {...c}><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>,
+        edit: <svg {...c}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>,
+        trash: <svg {...c}><polyline points="3 6 5 6 21 6" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /></svg>,
+        tag: <svg {...c}><path d="M20.59 13.41 11 3H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82Z" /><circle cx="7.5" cy="7.5" r="1.5" /></svg>,
+        check: <svg {...c}><polyline points="20 6 9 17 4 12" /></svg>,
+        close: <svg {...c}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>,
+    };
+    return icons[name] || null;
+}
 
 export default function TiposClaseIndex({ auth, tiposClase, filters }) {
     const [showModal, setShowModal] = useState(false);
     const [editingTipo, setEditingTipo] = useState(null);
     const [search, setSearch] = useState(filters.search || '');
+    const [confirmState, setConfirmState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        onConfirm: null,
+    });
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         nombre: '',
@@ -51,10 +84,17 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
         }
     };
 
+    const openConfirm = (opts) => setConfirmState({ open: true, ...opts });
+    const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
+
     const handleDelete = (tipo) => {
-        if (confirm(`¿Estás segura de eliminar "${tipo.nombre}"?`)) {
-            router.delete(route('admin.tipos-clase.destroy', tipo.id));
-        }
+        openConfirm({
+            title: 'Eliminar tipo de clase',
+            message: `¿Estás segura de eliminar "${tipo.nombre}"?`,
+            confirmText: 'Eliminar',
+            cancelText: 'Cancelar',
+            onConfirm: () => router.delete(route('admin.tipos-clase.destroy', tipo.id)),
+        });
     };
 
     const handleToggle = (tipo) => {
@@ -74,7 +114,6 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
             <Head title="Tipos de Clase" />
 
             <div className="page-container">
-
                 {/* Header */}
                 <div className="page-header">
                     <div>
@@ -82,7 +121,7 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                         <p className="page-subtitle">Gestiona los diferentes tipos de clases del box</p>
                     </div>
                     <button onClick={openCreateModal} className="btn-primary">
-                        <span>＋</span>
+                        <Icon name="plus" size={16} />
                         Nuevo Tipo
                     </button>
                 </div>
@@ -90,7 +129,7 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                 {/* Search */}
                 <form onSubmit={handleSearch} className="search-form">
                     <div className="search-wrapper">
-                        <span className="search-icon">🔍</span>
+                        <span className="search-icon"><Icon name="search" size={16} /></span>
                         <input
                             type="text"
                             value={search}
@@ -121,45 +160,46 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                             {tiposClase.data.length === 0 ? (
                                 <tr>
                                     <td colSpan="5" className="empty-state">
-                                        <span>🏷️</span>
+                                        <span className="empty-icon"><Icon name="tag" size={30} /></span>
                                         <p>No hay tipos de clase registrados</p>
                                     </td>
                                 </tr>
                             ) : (
                                 tiposClase.data.map((tipo) => (
                                     <tr key={tipo.id}>
-                                        <td className="td-nombre">{tipo.nombre}</td>
-                                        <td>
+                                        <td className="td-nombre" data-label="Nombre">{tipo.nombre}</td>
+                                        <td data-label="Color">
                                             <div className="color-badge" style={{ backgroundColor: tipo.color }}>
                                                 {tipo.color}
                                             </div>
                                         </td>
-                                        <td className="td-descripcion">
+                                        <td className="td-descripcion" data-label="Descripción">
                                             {tipo.descripcion || <span className="text-muted">—</span>}
                                         </td>
-                                        <td>
+                                        <td data-label="Estado">
                                             <button
                                                 onClick={() => handleToggle(tipo)}
                                                 className={`status-badge ${tipo.activo ? 'status-active' : 'status-inactive'}`}
                                             >
-                                                {tipo.activo ? '✓ Activo' : '✗ Inactivo'}
+                                                <Icon name={tipo.activo ? 'check' : 'close'} size={14} />
+                                                {tipo.activo ? 'Activo' : 'Inactivo'}
                                             </button>
                                         </td>
-                                        <td>
+                                        <td data-label="Acciones">
                                             <div className="actions">
                                                 <button
                                                     onClick={() => openEditModal(tipo)}
                                                     className="btn-icon btn-icon-edit"
                                                     title="Editar"
                                                 >
-                                                    ✏️
+                                                    <Icon name="edit" size={16} />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(tipo)}
                                                     className="btn-icon btn-icon-delete"
                                                     title="Eliminar"
                                                 >
-                                                    🗑️
+                                                    <Icon name="trash" size={16} />
                                                 </button>
                                             </div>
                                         </td>
@@ -192,7 +232,8 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                         <div className="modal-glass" onClick={(e) => e.stopPropagation()}>
                             <div className="modal-header">
                                 <h2 className="modal-title">
-                                    {editingTipo ? '✏️ Editar Tipo' : '✨ Nuevo Tipo de Clase'}
+                                    <Icon name={editingTipo ? 'edit' : 'plus'} size={16} />
+                                    {editingTipo ? 'Editar Tipo' : 'Nuevo Tipo de Clase'}
                                 </h2>
                                 <button onClick={closeModal} className="btn-close">✕</button>
                             </div>
@@ -271,16 +312,21 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                         </div>
                     </div>
                 )}
+                <ConfirmDialog
+                    open={confirmState.open}
+                    title={confirmState.title}
+                    message={confirmState.message}
+                    confirmText={confirmState.confirmText}
+                    cancelText={confirmState.cancelText}
+                    onConfirm={confirmState.onConfirm}
+                    onClose={closeConfirm}
+                />
             </div>
 
-            <style jsx>{`
+            <style>{`
                 * { box-sizing: border-box; }
 
-                .page-container {
-                    max-width: 1300px;
-                    margin: 0 auto;
-                    padding: 0.5rem 0;
-                }
+                .page-container { max-width: 1300px; margin: 0 auto; padding: 0.5rem 0; }
 
                 /* ── Header ── */
                 .page-header {
@@ -309,25 +355,23 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
 
                 /* ── Buttons ── */
                 .btn-primary {
-                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
-                    color: #000;
-                    border: none;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 12px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    background: rgba(255,20,147,0.18);
+                    border: 1px solid rgba(255,255,255,0.18);
+                    color: #FF1493;
+                    text-shadow: 0 0 8px rgba(255,20,147,0.35);
+                    padding: 0.875rem 1.5rem;
+                    border-radius: 10px;
                     font-weight: 900;
                     font-size: 0.875rem;
                     cursor: pointer;
-                    transition: all 0.3s;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    box-shadow: 0 4px 20px rgba(255,20,147,0.4), 0 0 0 1px rgba(255,20,147,0.3);
+                    transition: all 0.25s ease;
+                    backdrop-filter: blur(10px);
                     white-space: nowrap;
                 }
-                .btn-primary:hover:not(:disabled) {
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 30px rgba(255,20,147,0.55);
-                }
+                .btn-primary:hover:not(:disabled) { background: rgba(255,20,147,0.28); color: #fff; box-shadow: 0 0 20px rgba(255,20,147,0.35); }
                 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
                 /* ── Search ── */
@@ -349,45 +393,41 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                 .search-icon {
                     position: absolute;
                     left: 1rem;
-                    font-size: 1rem;
+                    width: 16px;
+                    height: 16px;
+                    color: rgba(255,255,255,0.5);
                     pointer-events: none;
+                    display: inline-flex;
                 }
 
                 .search-input {
                     width: 100%;
                     padding: 0.875rem 1rem 0.875rem 2.75rem;
-                    background: rgba(255,20,147,0.04);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255,20,147,0.2);
-                    border-radius: 12px;
+                    background: #000;
+                    border: 2px solid rgba(255,20,147,0.27);
+                    border-radius: 10px;
                     color: #fff;
                     font-size: 0.875rem;
-                    transition: all 0.3s;
+                    transition: all 0.2s;
                     outline: none;
                 }
-                .search-input::placeholder { color: rgba(255,255,255,0.3); }
-                .search-input:focus {
-                    border-color: rgba(255,20,147,0.6);
-                    background: rgba(255,20,147,0.07);
-                    box-shadow: 0 0 0 3px rgba(255,20,147,0.1);
-                }
+                .search-input:focus { border-color: rgba(255,20,147,0.55); box-shadow: 0 0 0 3px rgba(255,20,147,0.08); }
 
                 .btn-search {
-                    background: rgba(255,20,147,0.08);
-                    border: 1px solid rgba(255,20,147,0.4);
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255,20,147,0.1);
+                    border: 2px solid rgba(255,20,147,0.5);
                     color: #FF1493;
                     padding: 0.875rem 1.5rem;
-                    border-radius: 12px;
+                    border-radius: 10px;
                     font-weight: 700;
                     cursor: pointer;
-                    transition: all 0.25s;
+                    transition: all 0.2s;
                     white-space: nowrap;
                 }
-                .btn-search:hover {
-                    background: rgba(255,20,147,0.18);
-                    border-color: #FF1493;
-                    box-shadow: 0 0 15px rgba(255,20,147,0.2);
-                }
+                .btn-search:hover { background: rgba(255,20,147,0.18); }
 
                 /* ── Glass Card ── */
                 .glass-card {
@@ -403,13 +443,15 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                         inset 0 1px 0 rgba(255,20,147,0.1);
                 }
 
-                .table-scroll { overflow-x: auto; }
+                .table-scroll {
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
 
-                /* ── Table ── */
                 .table {
                     width: 100%;
                     border-collapse: collapse;
-                    min-width: 550px;
+                    min-width: 760px; /* mantener vista tipo desktop y habilitar scroll horizontal en móvil */
                 }
 
                 .table thead {
@@ -473,6 +515,9 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                 }
 
                 .status-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.35rem;
                     padding: 0.4rem 0.875rem;
                     border-radius: 8px;
                     font-weight: 700;
@@ -497,11 +542,15 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                 .actions { display: flex; gap: 0.5rem; }
 
                 .btn-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 34px;
+                    height: 34px;
                     background: rgba(255,255,255,0.04);
                     border: 1px solid rgba(255,20,147,0.2);
-                    padding: 0.4rem 0.6rem;
                     border-radius: 8px;
-                    font-size: 1rem;
+                    color: #fff;
                     cursor: pointer;
                     transition: all 0.2s;
                 }
@@ -521,7 +570,18 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                     padding: 3.5rem 1rem !important;
                     color: rgba(255,255,255,0.25) !important;
                 }
-                .empty-state span { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+                .empty-state span.empty-icon {
+                    width: 54px;
+                    height: 54px;
+                    margin: 0 auto 0.75rem;
+                    border-radius: 12px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: rgba(255,20,147,0.85);
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.3);
+                }
                 .empty-state p { margin: 0; }
 
                 /* ── Pagination ── */
@@ -602,11 +662,13 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                 }
 
                 .modal-title {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
                     color: #FF1493;
-                    font-size: 1.25rem;
+                    font-size: 1.1rem;
                     font-weight: 900;
                     margin: 0;
-                    letter-spacing: 0.5px;
                 }
 
                 .btn-close {
@@ -749,6 +811,14 @@ export default function TiposClaseIndex({ auth, tiposClase, filters }) {
                     .modal-footer { flex-direction: column; }
                     .btn-cancel, .btn-primary { width: 100%; justify-content: center; }
                     .color-picker-row { flex-wrap: wrap; }
+                }
+
+                @media (max-width: 768px) {
+                    /* mantener tabla estilo desktop; solo ajustes de layout general */
+                    .page-header { flex-direction: column; align-items: stretch; }
+                    .btn-primary { width: 100%; justify-content: center; }
+                    .search-form { flex-direction: column; }
+                    .btn-search { width: 100%; }
                 }
             `}</style>
         </DashboardLayout>

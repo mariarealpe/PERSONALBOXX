@@ -1,6 +1,7 @@
 import { Head, useForm, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useState, useRef } from 'react';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 // ── Tipos de plan con etiquetas legibles ──────────────────────────────────────
 const TIPOS = [
@@ -24,7 +25,6 @@ function TarjetaPlan({ plan, onEdit, onDelete, onToggle }) {
     const tipoColor = TIPO_COLORES[plan.tipo] || '#FF1493';
     const tipoLabel = TIPOS.find(t => t.value === plan.tipo)?.label || plan.tipo;
 
-    // Fondo: foto si existe, sino color sólido
     const fondoStyle = plan.foto_url
         ? { backgroundImage: `url(${plan.foto_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
         : { background: plan.color_fondo || '#1a1a2e' };
@@ -34,7 +34,8 @@ function TarjetaPlan({ plan, onEdit, onDelete, onToggle }) {
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                width: 280,
+                width: '100%',
+                maxWidth: 320,
                 minHeight: 420,
                 borderRadius: 20,
                 overflow: 'hidden',
@@ -46,7 +47,7 @@ function TarjetaPlan({ plan, onEdit, onDelete, onToggle }) {
                 transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
                 transform: hover ? 'translateY(-6px)' : 'translateY(0)',
                 cursor: 'default',
-                flexShrink: 0,
+                justifySelf: 'stretch',
             }}
         >
             {/* ── Zona superior: foto o color ── */}
@@ -259,12 +260,12 @@ function ModalPlan({ plan, onClose }) {
         : { background: data.color_fondo || '#1a1a2e' };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '1.5rem', overflowY: 'auto' }}>
-            <div style={{ background: '#0a0a0a', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 16, width: '100%', maxWidth: 820, boxShadow: '0 40px 80px rgba(0,0,0,0.8)', marginBottom: '1.5rem' }}
+        <div className="plan-modal-overlay">
+            <div className="plan-modal-card"
                  onClick={e => e.stopPropagation()}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="plan-modal-header">
                     <div>
                         <h2 style={{ color: '#fff', fontWeight: 900, margin: 0, fontSize: '1.4rem' }}>
                             {editando ? '✏️ Editar Plan' : '✨ Nuevo Plan'}
@@ -276,14 +277,14 @@ function ModalPlan({ plan, onClose }) {
                     <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#666', width: 36, height: 36, borderRadius: 8, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 0 }}>
+                <form onSubmit={handleSubmit} className="plan-modal-form">
+                    <div className="plan-modal-grid">
 
                         {/* ── Columna izquierda: formulario ── */}
-                        <div style={{ padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                        <div className="plan-modal-main">
 
                             {/* Nombre y tipo */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-grid-2">
                                 <div>
                                     <label style={lbl}>Nombre del plan *</label>
                                     <input value={data.nombre} onChange={e => setData('nombre', e.target.value)} required placeholder="Ej: Plan Gold" style={inp} />
@@ -311,7 +312,7 @@ function ModalPlan({ plan, onClose }) {
                             </div>
 
                             {/* Opciones */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-grid-2">
                                 <div>
                                     <label style={{ ...lbl, marginBottom: 10 }}>Clases por semana</label>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
@@ -423,11 +424,11 @@ function ModalPlan({ plan, onClose }) {
                         </div>
 
                         {/* ── Columna derecha: preview en vivo ── */}
-                        <div style={{ borderLeft: '1px solid rgba(255,255,255,0.07)', padding: '1.75rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.3)' }}>
+                        <div className="plan-modal-preview">
                             <p style={{ color: '#555', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, marginBottom: '1rem' }}>Vista previa</p>
 
                             {/* Mini tarjeta preview */}
-                            <div style={{ width: 220, borderRadius: 16, overflow: 'hidden', border: `2px solid ${tipoColor}44`, boxShadow: `0 12px 40px ${tipoColor}30` }}>
+                            <div style={{ width: '100%', maxWidth: 220, borderRadius: 16, overflow: 'hidden', border: `2px solid ${tipoColor}44`, boxShadow: `0 12px 40px ${tipoColor}30` }}>
                                 {/* Zona de imagen/color */}
                                 <div style={{ ...fondoPreviewStyle, height: 150, position: 'relative' }}>
                                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.7) 100%)' }} />
@@ -470,7 +471,7 @@ function ModalPlan({ plan, onClose }) {
                     </div>
 
                     {/* Footer botones */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', padding: '1.25rem 2rem', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="plan-modal-footer">
                         <button type="button" onClick={onClose}
                                 style={{ background: 'transparent', border: '2px solid rgba(255,255,255,0.1)', color: '#666', padding: '0.7rem 1.5rem', borderRadius: 8, cursor: 'pointer', fontWeight: 700 }}>
                             Cancelar
@@ -491,6 +492,17 @@ export default function PlanesIndex({ auth, planes }) {
     const [modalAbierto, setModalAbierto] = useState(false);
     const [planEditando, setPlanEditando] = useState(null);
     const [filtro, setFiltro]             = useState('todos');
+    const [confirmState, setConfirmState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        confirmText: 'Confirmar',
+        cancelText: 'Cancelar',
+        onConfirm: null,
+    });
+
+    const openConfirm = (opts) => setConfirmState({ open: true, ...opts });
+    const closeConfirm = () => setConfirmState((s) => ({ ...s, open: false }));
 
     const fmt = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n ?? 0);
 
@@ -499,8 +511,13 @@ export default function PlanesIndex({ auth, planes }) {
     const cerrarModal = () => { setModalAbierto(false); setPlanEditando(null); };
 
     const handleDelete = (plan) => {
-        if (!confirm(`¿Eliminar el plan "${plan.nombre}"? Esta acción no se puede deshacer.`)) return;
-        router.delete(route('admin.planes.destroy', plan.id));
+        openConfirm({
+            title: 'Eliminar plan',
+            message: `¿Eliminar el plan "${plan.nombre}"? Esta acción no se puede deshacer.`,
+            confirmText: 'Eliminar',
+            cancelText: 'Cancelar',
+            onConfirm: () => router.delete(route('admin.planes.destroy', plan.id)),
+        });
     };
 
     const handleToggle = (plan) => {
@@ -523,58 +540,64 @@ export default function PlanesIndex({ auth, planes }) {
                 <ModalPlan plan={planEditando} onClose={cerrarModal} />
             )}
 
-            <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+            <ConfirmDialog
+                open={confirmState.open}
+                title={confirmState.title}
+                message={confirmState.message}
+                confirmText={confirmState.confirmText}
+                cancelText={confirmState.cancelText}
+                onConfirm={confirmState.onConfirm}
+                onClose={closeConfirm}
+            />
 
-                {/* Encabezado */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="planes-wrap">
+
+                <div className="planes-header">
                     <div>
-                        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#FF1493', margin: 0, textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>PLANES</h1>
-                        <p style={{ color: '#999', margin: '0.5rem 0 0', fontSize: '0.875rem' }}>Gestiona los planes de membresía del gimnasio</p>
+                        <h1 className="planes-title">PLANES</h1>
+                        <p className="planes-sub">Gestiona los planes de membresía del gimnasio</p>
                     </div>
-                    <button onClick={abrirCrear}
-                            style={{ background: 'linear-gradient(135deg,#FF1493,#C71585)', color: '#000', border: 'none', padding: '0.875rem 1.5rem', borderRadius: 8, fontWeight: 900, cursor: 'pointer', fontSize: '0.875rem', boxShadow: '0 0 20px rgba(255,20,147,0.4)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button onClick={abrirCrear} className="btn-primary">
                         ✨ Nuevo Plan
                     </button>
                 </div>
 
-                {/* Stats rápidas */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                <div className="planes-stats">
                     {[
                         { label: 'Total planes', value: planes.length, icon: '📋', color: '#FF1493' },
                         { label: 'Planes activos', value: planes.filter(p => p.activo).length, icon: '✅', color: '#22c55e' },
                         { label: 'Clientes activos', value: planes.reduce((s, p) => s + p.clientes_activos, 0), icon: '👥', color: '#3b82f6' },
                         { label: 'Ingresos estimados', value: fmt(totalIngresos), icon: '💰', color: '#f59e0b' },
                     ].map(s => (
-                        <div key={s.label} style={{ background: 'rgba(10,10,10,0.95)', border: `2px solid ${s.color}30`, borderRadius: 12, padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <span style={{ fontSize: '1.75rem' }}>{s.icon}</span>
+                        <div key={s.label} className="stat-card" style={{ '--s-color': s.color }}>
+                            <span className="stat-ico">{s.icon}</span>
                             <div>
-                                <div style={{ color: s.color, fontSize: '1.5rem', fontWeight: 900, lineHeight: 1 }}>{s.value}</div>
-                                <div style={{ color: '#666', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 1, marginTop: 3 }}>{s.label}</div>
+                                <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+                                <div className="stat-label">{s.label}</div>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Filtros */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem' }}>
+                <div className="planes-filters">
                     {[{ key: 'todos', label: 'Todos' }, { key: 'activos', label: 'Activos' }, { key: 'inactivos', label: 'Inactivos' }].map(f => (
-                        <button key={f.key} onClick={() => setFiltro(f.key)}
-                                style={{ padding: '0.5rem 1.25rem', borderRadius: 20, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', background: filtro === f.key ? '#FF1493' : 'rgba(255,20,147,0.08)', color: filtro === f.key ? '#000' : '#FF1493', border: filtro === f.key ? 'none' : '1px solid rgba(255,20,147,0.3)', transition: 'all 0.2s' }}>
+                        <button
+                            key={f.key}
+                            onClick={() => setFiltro(f.key)}
+                            className={`filter-chip ${filtro === f.key ? 'active' : ''}`}
+                        >
                             {f.label}
                         </button>
                     ))}
                 </div>
 
-                {/* Grid de tarjetas */}
                 {planesFiltrados.length === 0 ? (
-                    <div style={{ background: 'rgba(10,10,10,0.95)', border: '2px solid rgba(255,20,147,0.2)', borderRadius: 12, padding: '4rem', textAlign: 'center' }}>
-                        <p style={{ color: '#555', fontSize: '1rem', margin: 0 }}>No hay planes para mostrar.</p>
-                        <button onClick={abrirCrear} style={{ marginTop: '1rem', background: 'rgba(255,20,147,0.1)', border: '2px solid #FF1493', color: '#FF1493', padding: '0.75rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem' }}>
-                            ✨ Crear primer plan
-                        </button>
+                    <div className="empty-state glass-card">
+                        <p>No hay planes para mostrar.</p>
+                        <button onClick={abrirCrear} className="btn-ghost">✨ Crear primer plan</button>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', justifyContent: 'flex-start' }}>
+                    <div className="planes-grid">
                         {planesFiltrados.map(plan => (
                             <TarjetaPlan
                                 key={plan.id}
@@ -587,6 +610,221 @@ export default function PlanesIndex({ auth, planes }) {
                     </div>
                 )}
             </div>
+
+            <style>{`
+                .planes-wrap {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.5rem;
+                }
+
+                .planes-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    gap: 1rem;
+                    flex-wrap: wrap;
+                }
+
+                .planes-title {
+                    font-size: clamp(1.6rem, 4vw, 2.2rem);
+                    font-weight: 900;
+                    color: #FF1493;
+                    margin: 0 0 .25rem;
+                    text-shadow: 0 0 12px rgba(255,20,147,0.45);
+                }
+
+                .planes-sub { color: #777; margin: 0; font-size: .85rem; }
+
+                .btn-primary {
+                    background: rgba(255,20,147,0.18);
+                    border: 1px solid rgba(255,255,255,0.18);
+                    color: #FF1493;
+                    text-shadow: 0 0 8px rgba(255,20,147,0.35);
+                    padding: .875rem 1.5rem;
+                    border-radius: 10px;
+                    font-weight: 900;
+                    cursor: pointer;
+                    transition: all .25s ease;
+                    backdrop-filter: blur(10px);
+                }
+                .btn-primary:hover { background: rgba(255,20,147,0.28); color: #fff; }
+
+                .btn-ghost {
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.35);
+                    color: #FF1493;
+                    padding: .75rem 1.25rem;
+                    border-radius: 10px;
+                    font-weight: 700;
+                    cursor: pointer;
+                }
+
+                .glass-card {
+                    background: rgba(255,255,255,0.03);
+                    backdrop-filter: blur(22px);
+                    -webkit-backdrop-filter: blur(22px);
+                    border: 1px solid rgba(255,255,255,0.06);
+                    border-top: 1px solid rgba(255,255,255,0.12);
+                    border-radius: 16px;
+                    box-shadow: 0 0 28px rgba(255,20,147,0.08), 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07);
+                }
+
+                .planes-stats {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                    gap: 1rem;
+                }
+
+                .stat-card {
+                    background: rgba(10,10,10,0.95);
+                    border: 1px solid color-mix(in srgb, var(--s-color) 35%, transparent);
+                    border-radius: 12px;
+                    padding: 1rem 1.1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: .85rem;
+                }
+
+                .stat-ico { font-size: 1.5rem; }
+                .stat-value { font-size: 1.25rem; font-weight: 900; line-height: 1; }
+                .stat-label { color: #666; font-size: .68rem; text-transform: uppercase; letter-spacing: 1px; margin-top: .2rem; }
+
+                .planes-filters { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+                .filter-chip {
+                    padding: .5rem 1.1rem;
+                    border-radius: 999px;
+                    font-weight: 700;
+                    font-size: .8rem;
+                    cursor: pointer;
+                    background: rgba(255,20,147,0.08);
+                    color: #FF1493;
+                    border: 1px solid rgba(255,20,147,0.3);
+                }
+                .filter-chip.active {
+                    background: rgba(255,20,147,0.25);
+                    color: #fff;
+                    border-color: rgba(255,20,147,0.6);
+                }
+
+                .planes-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+                    gap: 1.2rem;
+                    align-items: stretch;
+                }
+
+                /* Modal responsive */
+                .plan-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.85);
+                    z-index: 1000;
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: center;
+                    padding: 1.5rem;
+                    overflow-y: auto;
+                }
+
+                .plan-modal-card {
+                    background: #0a0a0a;
+                    border: 2px solid rgba(255,255,255,0.1);
+                    border-radius: 16px;
+                    width: 100%;
+                    max-width: 820px;
+                    box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+                    margin-bottom: 1.5rem;
+                }
+
+                .plan-modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: .75rem;
+                    padding: 1.5rem 2rem;
+                    border-bottom: 1px solid rgba(255,255,255,0.07);
+                }
+
+                .plan-modal-form { width: 100%; }
+
+                .plan-modal-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 280px;
+                    gap: 0;
+                }
+
+                .plan-modal-main {
+                    padding: 1.75rem 2rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1.2rem;
+                    min-width: 0;
+                }
+
+                .plan-modal-preview {
+                    border-left: 1px solid rgba(255,255,255,0.07);
+                    padding: 1.75rem 1.5rem;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    background: rgba(0,0,0,0.3);
+                }
+
+                .form-grid-2 {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1rem;
+                }
+
+                .plan-modal-footer {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 0.75rem;
+                    padding: 1.25rem 2rem;
+                    border-top: 1px solid rgba(255,255,255,0.07);
+                    flex-wrap: wrap;
+                }
+
+                .empty-state {
+                    text-align: center;
+                    padding: 3rem 1rem;
+                }
+
+                .empty-state p { color: #666; margin: 0 0 1rem; }
+
+                @media (max-width: 1024px) {
+                    .plan-modal-grid { grid-template-columns: 1fr; }
+                    .plan-modal-preview {
+                        border-left: 0;
+                        border-top: 1px solid rgba(255,255,255,0.07);
+                        padding: 1.25rem 1rem 1.5rem;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .planes-header { flex-direction: column; align-items: stretch; }
+                    .btn-primary { width: 100%; }
+                    .planes-grid { grid-template-columns: 1fr; }
+                    .planes-stats { grid-template-columns: 1fr; }
+                    .planes-filters { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+                    .filter-chip { width: 100%; text-align: center; }
+                    .plan-modal-overlay { padding: .75rem; }
+                    .plan-modal-header { padding: 1rem 1rem; align-items: flex-start; }
+                    .plan-modal-main { padding: 1rem; }
+                    .form-grid-2 { grid-template-columns: 1fr; }
+                    .plan-modal-footer { padding: 1rem; flex-direction: column; }
+                    .plan-modal-footer button { width: 100%; }
+                }
+
+                @media (max-width: 480px) {
+                    .planes-filters { grid-template-columns: 1fr; }
+                    .plan-modal-card { border-radius: 12px; }
+                }
+            `}</style>
         </DashboardLayout>
     );
 }

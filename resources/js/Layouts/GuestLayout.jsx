@@ -2,7 +2,7 @@ export default function GuestLayout({ children }) {
     return (
         <>
             {children}
-            <style jsx global>{`
+            <style>{`
                 html, body {
                     margin: 0;
                     padding: 0;
@@ -20,5 +20,3 @@ export default function GuestLayout({ children }) {
         </>
     );
 }
-
-

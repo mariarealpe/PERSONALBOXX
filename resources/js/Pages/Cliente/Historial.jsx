@@ -16,13 +16,21 @@ export default function ClienteHistorial({ user, historial, tiposClase, totalPor
 
     const inp = { background: 'rgba(0,0,0,0.5)', border: '2px solid rgba(255,20,147,0.3)', borderRadius: 8, color: '#fff', padding: '0.625rem 1rem', fontSize: '0.875rem', outline: 'none' };
 
+    const Ico = {
+      chart:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+      search:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+      x:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+      user:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>,
+      check:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>,
+    };
+
     return (
         <ClienteLayout user={user}>
             <Head title="Mi Historial" />
             <div style={{ maxWidth: 1000, margin: '0 auto' }}>
 
                 <div style={{ marginBottom: '2rem' }}>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: C, margin: '0 0 0.25rem', textShadow: '0 0 10px rgba(255,20,147,0.5)' }}>📈 Mi Historial</h1>
+                    <h1 style={{ fontSize: '2rem', fontWeight: 900, color: C, margin: '0 0 0.25rem', textShadow: '0 0 10px rgba(255,20,147,0.5)' }}><span style={{width:22,height:22,display:'inline-flex',marginRight:8}}>{Ico.chart}</span>Mi Historial</h1>
                     <p style={{ color: '#999', margin: 0 }}>Todas las clases que has tomado</p>
                 </div>
 
@@ -69,8 +77,8 @@ export default function ClienteHistorial({ user, historial, tiposClase, totalPor
                             {tiposClase.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                         </select>
                     </div>
-                    <button onClick={filtrar} style={{ background: `linear-gradient(135deg, ${C}, #e60083)`, border: 'none', color: '#fff', padding: '0.625rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>🔍 Filtrar</button>
-                    <button onClick={limpiar} style={{ background: 'transparent', border: '2px solid rgba(255,20,147,0.4)', color: C, padding: '0.625rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>✕ Limpiar</button>
+                    <button onClick={filtrar} style={{ background: `linear-gradient(135deg, ${C}, #e60083)`, border: 'none', color: '#fff', padding: '0.625rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}><span style={{width:14,height:14,display:'inline-flex',marginRight:6}}>{Ico.search}</span>Filtrar</button>
+                    <button onClick={limpiar} style={{ background: 'transparent', border: '2px solid rgba(255,20,147,0.4)', color: C, padding: '0.625rem 1.5rem', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}><span style={{width:14,height:14,display:'inline-flex',marginRight:6}}>{Ico.x}</span>Limpiar</button>
                 </div>
 
                 {/* Lista */}
@@ -91,8 +99,12 @@ export default function ClienteHistorial({ user, historial, tiposClase, totalPor
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <span style={{ color: '#666', fontSize: '0.8rem' }}>👨‍🏫 {a.clase?.instructor?.name ?? 'Sin instructor'}</span>
-                                        <span style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e', border: '1px solid #22c55e', borderRadius: 20, padding: '0.2rem 0.6rem', fontSize: '0.7rem', fontWeight: 700 }}>✓ Asistí</span>
+                                        <span style={{ color:'#666', fontSize:'0.8rem', display:'inline-flex', alignItems:'center', gap:4 }}>
+                                          <span style={{width:13,height:13,display:'inline-flex'}}>{Ico.user}</span> {a.clase?.instructor?.name ?? 'Sin instructor'}
+                                        </span>
+                                        <span style={{ /* ... */ display:'inline-flex', alignItems:'center', gap:4 }}>
+                                          <span style={{width:13,height:13,display:'inline-flex'}}>{Ico.check}</span> Asistí
+                                        </span>
                                     </div>
                                 </div>
                             ))}

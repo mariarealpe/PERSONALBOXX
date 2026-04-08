@@ -18,7 +18,7 @@ function getLayout(user, children) {
     return <DashboardLayout user={user}>{children}</DashboardLayout>;
 }
 
-export default function Edit({ auth, mustVerifyEmail, status }) {
+export default function Edit({ auth, mustVerifyEmail, status, emailChange }) {
     const content = (
         <>
             <Head title="Mi Perfil" />
@@ -47,6 +47,7 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                         mustVerifyEmail={mustVerifyEmail}
                         status={status}
                         user={auth.user}
+                        emailChange={emailChange}
                     />
                     <UpdatePasswordForm />
                 </div>
@@ -117,6 +118,24 @@ export default function Edit({ auth, mustVerifyEmail, status }) {
                 .profile-name { color: #fff; font-size: 1rem; font-weight: 600; margin: 0; }
                 .profile-email { color: #555; font-size: 0.825rem; margin: 0; }
                 .sections-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+
+                @media (max-width: 640px) {
+                    .profile-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 1rem;
+                        margin-bottom: 1.5rem;
+                        padding-bottom: 1.25rem;
+                    }
+                    .header-avatar-wrap,
+                    .avatar-img,
+                    .avatar-letter { width: 68px; height: 68px; }
+                    .avatar-letter { font-size: 1.9rem; }
+                    .profile-title { font-size: 1.35rem; letter-spacing: 2px; }
+                    .profile-name { font-size: .95rem; }
+                    .profile-email { font-size: .78rem; }
+                    .sections-grid { gap: 1rem; }
+                }
             `}</style>
         </>
     );

@@ -13,13 +13,17 @@ class SendOtpMail extends Mailable
     use Queueable, SerializesModels;
 
     public $otp;
+    public $context;
+    public $targetEmail;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($otp)
+    public function __construct($otp, string $context = 'login_2fa', ?string $targetEmail = null)
     {
         $this->otp = $otp;
+        $this->context = $context;
+        $this->targetEmail = $targetEmail;
     }
 
     /**
@@ -28,7 +32,9 @@ class SendOtpMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Código de verificación 2FA',
+            subject: $this->context === 'email_change'
+                ? 'Confirma el cambio de correo'
+                : 'Código de verificación 2FA',
         );
     }
 
@@ -39,6 +45,11 @@ class SendOtpMail extends Mailable
     {
         return new Content(
             view: 'emails.otp',
+            with: [
+                'otp' => $this->otp,
+                'context' => $this->context,
+                'targetEmail' => $this->targetEmail,
+            ],
         );
     }
 
