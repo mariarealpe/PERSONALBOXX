@@ -67,30 +67,17 @@ export default function Welcome({ auth }) {
                             <span className="title-line title-accent">BOX</span>
                         </h1>
                         <p className="hero-subtitle">
-                            ENTRENAMIENTO FUNCIONAL &nbsp;•&nbsp; CROSSFIT &nbsp;•&nbsp; ALTO RENDIMIENTO
+                            ENTRENAMIENTO FUNCIONAL &nbsp;•&nbsp; CROSSFIT &nbsp;•&nbsp; BOXEO &nbsp;•&nbsp; ALTO RENDIMIENTO
                         </p>
-                        <p className="hero-description">
-                            Plataforma de gestión integral para el seguimiento de clases,<br />
-                            instructores, clientes y planes de entrenamiento.
-                        </p>
+                        <div className="hero-badges">
+                            <span className="badge">Clases para todos los niveles</span>
+                            <span className="badge">Entrenadores certificados</span>
+                            <span className="badge">Ambiente motivador</span>
+                        </div>
                     </div>
 
                     {/* CTAs */}
-                    <div className="hero-ctas">
-                        {auth.user ? (
-                            <Link href={route('dashboard')} className="btn-primary">
-                                <span className="btn-icon">⚡</span>
-                                Ir al Panel
-                                <span className="btn-arrow">→</span>
-                            </Link>
-                        ) : (
-                            <Link href={route('login')} className="btn-primary">
-                                <span className="btn-icon">🔐</span>
-                                Iniciar Sesión
-                                <span className="btn-arrow">→</span>
-                            </Link>
-                        )}
-                    </div>
+                    {/* ...se elimina el botón grande central... */}
 
                     {/* Stats rápidas */}
                     <div className="hero-stats">
@@ -393,12 +380,24 @@ export default function Welcome({ auth }) {
                     margin-top: 0.5rem;
                 }
 
-                .hero-description {
-                    font-size: 1rem;
-                    color: #666;
-                    line-height: 1.7;
-                    max-width: 500px;
+                .hero-badges {
+                    display: flex;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                    justify-content: center;
                     margin-top: 0.5rem;
+                }
+
+                .badge {
+                    padding: 0.35rem 0.75rem;
+                    border-radius: 999px;
+                    border: 1px solid rgba(255,20,147,0.35);
+                    color: #FF1493;
+                    font-size: 0.7rem;
+                    letter-spacing: 0.5px;
+                    text-transform: uppercase;
+                    background: rgba(255,20,147,0.08);
+                    box-shadow: 0 0 12px rgba(255,20,147,0.15);
                 }
 
                 /* ── Botones CTA ── */

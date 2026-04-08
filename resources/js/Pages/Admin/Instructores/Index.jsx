@@ -7,7 +7,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
     const [editingInstructor, setEditingInstructor] = useState(null);
     const [search, setSearch] = useState(filters.search || '');
     const [previewFoto, setPreviewFoto] = useState(null);
-    const [isSubmitting, setIsSubmitting] = useState(false); // reemplaza `processing`
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { data, setData, errors, setError, clearErrors, reset } = useForm({
         name: '',
@@ -58,10 +58,6 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         clearErrors();
     };
 
-    // ── FIX: router.post() con FormData directo ──────────────────────────────
-    // El método post() del useForm ignora el parámetro `data: formData` y envía
-    // los campos internos del hook en lugar del FormData construido manualmente.
-    // Con router.post() el FormData va como segundo argumento y funciona bien.
     const handleSubmit = (e) => {
         e.preventDefault();
         clearErrors();
@@ -76,7 +72,6 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         if (data.biografia) formData.append('biografia', data.biografia);
         if (data.foto) formData.append('foto', data.foto);
         formData.append('activo', data.activo ? '1' : '0');
-
         data.especialidades_ids.forEach((id, index) => {
             formData.append(`especialidades_ids[${index}]`, id);
         });
@@ -85,34 +80,25 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
 
         if (editingInstructor) {
             formData.append('_method', 'PUT');
-            router.post(
-                route('admin.instructores.update', editingInstructor.id),
-                formData,
-                {
-                    forceFormData: true,
-                    onSuccess: () => closeModal(),
-                    onError: (errs) => {
-                        setIsSubmitting(false);
-                        Object.keys(errs).forEach(k => setError(k, errs[k]));
-                    },
-                }
-            );
+            router.post(route('admin.instructores.update', editingInstructor.id), formData, {
+                forceFormData: true,
+                onSuccess: () => closeModal(),
+                onError: (errs) => {
+                    setIsSubmitting(false);
+                    Object.keys(errs).forEach(k => setError(k, errs[k]));
+                },
+            });
         } else {
-            router.post(
-                route('admin.instructores.store'),
-                formData,
-                {
-                    forceFormData: true,
-                    onSuccess: () => closeModal(),
-                    onError: (errs) => {
-                        setIsSubmitting(false);
-                        Object.keys(errs).forEach(k => setError(k, errs[k]));
-                    },
-                }
-            );
+            router.post(route('admin.instructores.store'), formData, {
+                forceFormData: true,
+                onSuccess: () => closeModal(),
+                onError: (errs) => {
+                    setIsSubmitting(false);
+                    Object.keys(errs).forEach(k => setError(k, errs[k]));
+                },
+            });
         }
     };
-    // ─────────────────────────────────────────────────────────────────────────
 
     const handleDelete = (instructor) => {
         if (confirm(`¿Estás segura de eliminar al instructor "${instructor.user.name}"?`)) {
@@ -137,9 +123,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         if (file) {
             setData('foto', file);
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewFoto(reader.result);
-            };
+            reader.onloadend = () => setPreviewFoto(reader.result);
             reader.readAsDataURL(file);
         }
     };
@@ -147,19 +131,14 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
     const toggleEspecialidad = (tipoId) => {
         const current = [...data.especialidades_ids];
         const index = current.indexOf(tipoId);
-
-        if (index > -1) {
-            current.splice(index, 1);
-        } else {
-            current.push(tipoId);
-        }
-
+        if (index > -1) current.splice(index, 1);
+        else current.push(tipoId);
         setData('especialidades_ids', current);
     };
 
     const formatCOP = (valor) => {
         const num = parseFloat(valor);
-        if (!num || num === 0) return <span style={{ color: '#555', fontStyle: 'italic', fontSize: '0.8rem' }}>No definida</span>;
+        if (!num || num === 0) return <span className="tarifa-empty">No definida</span>;
         return <span className="tarifa-value">${new Intl.NumberFormat('es-CO').format(num)} COP</span>;
     };
 
@@ -167,135 +146,140 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
         <DashboardLayout user={auth.user}>
             <Head title="Gestión de Instructores" />
 
-            <div className="instructores-container">
-                <div className="header">
+            <div className="page-container">
+
+                {/* Header */}
+                <div className="page-header">
                     <div>
-                        <h1 className="title">INSTRUCTORES</h1>
-                        <p className="subtitle">Gestiona el equipo de instructores del box</p>
+                        <h1 className="page-title">INSTRUCTORES</h1>
+                        <p className="page-subtitle">Gestiona el equipo de instructores del box</p>
                     </div>
-                    <button onClick={openCreateModal} className="btn-create">
-                        <span className="icon">➕</span>
+                    <button onClick={openCreateModal} className="btn-primary">
+                        <span>＋</span>
                         Nuevo Instructor
                     </button>
                 </div>
 
+                {/* Search */}
                 <form onSubmit={handleSearch} className="search-form">
-                    <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Buscar por nombre, email o especialidad..."
-                        className="search-input"
-                    />
+                    <div className="search-wrapper">
+                        <span className="search-icon">🔍</span>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Buscar por nombre, email o especialidad..."
+                            className="search-input"
+                        />
+                    </div>
                     <button type="submit" className="btn-search">
-                        🔍 Buscar
+                        Buscar
                     </button>
                 </form>
 
-                <div className="table-container">
-                    <table className="table">
-                        <thead>
-                        <tr>
-                            <th>Instructor</th>
-                            <th>Especialidades</th>
-                            {/* CAMBIO: dos columnas separadas en lugar de una "Tarifas" */}
-                            <th style={{ textAlign: 'center' }}>💼 Tarifa por Clase</th>
-                            <th style={{ textAlign: 'center' }}>👥 Tarifa por Asistente</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {instructores.data.length === 0 ? (
+                {/* Table glass card */}
+                <div className="glass-card">
+                    <div className="table-scroll">
+                        <table className="table">
+                            <thead>
                             <tr>
-                                <td colSpan="6" className="empty-state">
-                                    No hay instructores registrados
-                                </td>
+                                <th>Instructor</th>
+                                <th>Especialidades</th>
+                                <th className="text-center">💼 Tarifa por Clase</th>
+                                <th className="text-center">👥 Tarifa por Asistente</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
                             </tr>
-                        ) : (
-                            instructores.data.map((instructor) => (
-                                <tr key={instructor.id}>
-                                    <td>
-                                        <div className="instructor-info">
-                                            <div className="instructor-avatar">
-                                                {instructor.foto_url ? (
-                                                    <img src={instructor.foto_url} alt={instructor.user.name} />
-                                                ) : (
-                                                    <span className="avatar-placeholder">
-                                                            {instructor.user.name.charAt(0).toUpperCase()}
-                                                        </span>
-                                                )}
-                                            </div>
-                                            <div className="instructor-details">
-                                                <p className="instructor-name">{instructor.user.name}</p>
-                                                <p className="instructor-email">{instructor.user.email}</p>
-                                                {instructor.especialidad && (
-                                                    <p className="instructor-specialty">{instructor.especialidad}</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="especialidades-badges">
-                                            {instructor.especialidades.length > 0 ? (
-                                                instructor.especialidades.map((tipo) => (
-                                                    <span
-                                                        key={tipo.id}
-                                                        className="especialidad-badge"
-                                                        style={{ backgroundColor: tipo.color }}
-                                                    >
-                                                            {tipo.nombre}
-                                                        </span>
-                                                ))
-                                            ) : (
-                                                <span className="no-especialidades">Sin especialidades</span>
-                                            )}
-                                        </div>
-                                    </td>
-
-                                    {/* CAMBIO: columna propia para tarifa por clase */}
-                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                                        {formatCOP(instructor.tarifa_por_clase)}
-                                    </td>
-
-                                    {/* CAMBIO: columna propia para tarifa por asistente */}
-                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                                        {formatCOP(instructor.tarifa_por_asistente)}
-                                    </td>
-
-                                    <td>
-                                        <button
-                                            onClick={() => handleToggle(instructor)}
-                                            className={`badge ${instructor.activo ? 'badge-active' : 'badge-inactive'}`}
-                                        >
-                                            {instructor.activo ? '✓ Activo' : '✗ Inactivo'}
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <div className="actions">
-                                            <button
-                                                onClick={() => openEditModal(instructor)}
-                                                className="btn-action btn-edit"
-                                                title="Editar"
-                                            >
-                                                ✏️
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(instructor)}
-                                                className="btn-action btn-delete"
-                                                title="Eliminar"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
+                            </thead>
+                            <tbody>
+                            {instructores.data.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="empty-state">
+                                        <span>👨‍🏫</span>
+                                        <p>No hay instructores registrados</p>
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                        </tbody>
-                    </table>
+                            ) : (
+                                instructores.data.map((instructor) => (
+                                    <tr key={instructor.id}>
+                                        <td>
+                                            <div className="instructor-cell">
+                                                <div className="instructor-avatar">
+                                                    {instructor.foto_url ? (
+                                                        <img src={instructor.foto_url} alt={instructor.user.name} />
+                                                    ) : (
+                                                        <span className="avatar-initial">
+                                                                {instructor.user.name.charAt(0).toUpperCase()}
+                                                            </span>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="instructor-name">{instructor.user.name}</p>
+                                                    <p className="instructor-email">{instructor.user.email}</p>
+                                                    {instructor.especialidad && (
+                                                        <p className="instructor-spec">{instructor.especialidad}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="badges-wrap">
+                                                {instructor.especialidades.length > 0 ? (
+                                                    instructor.especialidades.map((tipo) => (
+                                                        <span
+                                                            key={tipo.id}
+                                                            className="esp-badge"
+                                                            style={{ backgroundColor: tipo.color }}
+                                                        >
+                                                                {tipo.nombre}
+                                                            </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-muted">Sin especialidades</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="text-center">
+                                            {formatCOP(instructor.tarifa_por_clase)}
+                                        </td>
+                                        <td className="text-center">
+                                            {formatCOP(instructor.tarifa_por_asistente)}
+                                        </td>
+                                        <td>
+                                            <button
+                                                onClick={() => handleToggle(instructor)}
+                                                className={`status-badge ${instructor.activo ? 'status-active' : 'status-inactive'}`}
+                                            >
+                                                {instructor.activo ? '✓ Activo' : '✗ Inactivo'}
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <div className="actions">
+                                                <button
+                                                    onClick={() => openEditModal(instructor)}
+                                                    className="btn-icon btn-icon-edit"
+                                                    title="Editar"
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(instructor)}
+                                                    className="btn-icon btn-icon-delete"
+                                                    title="Eliminar"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
+                {/* Pagination */}
                 {instructores.links.length > 3 && (
                     <div className="pagination">
                         {instructores.links.map((link, index) => (
@@ -303,36 +287,33 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                 key={index}
                                 onClick={() => link.url && router.visit(link.url)}
                                 disabled={!link.url}
-                                className={`page-link ${link.active ? 'active' : ''}`}
+                                className={`page-btn ${link.active ? 'active' : ''}`}
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />
                         ))}
                     </div>
                 )}
 
+                {/* Modal */}
                 {showModal && (
                     <div className="modal-overlay" onClick={closeModal}>
-                        {/* El modal usa flex column para que el footer quede siempre visible */}
-                        <div className="modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-glass" onClick={(e) => e.stopPropagation()}>
 
-                            {/* Header sticky arriba */}
                             <div className="modal-header">
                                 <h2 className="modal-title">
-                                    {editingInstructor ? 'Editar Instructor' : 'Nuevo Instructor'}
+                                    {editingInstructor ? '✏️ Editar Instructor' : '✨ Nuevo Instructor'}
                                 </h2>
                                 <button onClick={closeModal} className="btn-close">✕</button>
                             </div>
 
-                            {/* Form ocupa todo el espacio restante con scroll interno */}
                             <form onSubmit={handleSubmit} className="modal-form-wrapper">
 
-                                {/* Zona scrolleable */}
                                 <div className="modal-body">
 
-                                    {/* Foto de perfil */}
+                                    {/* Foto */}
                                     <div className="form-group">
-                                        <label className="label">Foto de perfil</label>
-                                        <div className="foto-upload">
+                                        <label className="form-label">Foto de perfil</label>
+                                        <div className="foto-row">
                                             <div className="foto-preview">
                                                 {previewFoto ? (
                                                     <img src={previewFoto} alt="Preview" />
@@ -343,52 +324,45 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                                     </div>
                                                 )}
                                             </div>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFotoChange}
-                                                className="foto-input"
-                                                id="foto-input"
-                                            />
-                                            <label htmlFor="foto-input" className="foto-button">
+                                            <input type="file" accept="image/*" onChange={handleFotoChange} id="foto-input" className="hidden-input" />
+                                            <label htmlFor="foto-input" className="btn-upload">
                                                 Seleccionar imagen
                                             </label>
                                         </div>
-                                        {errors.foto && <p className="error">{errors.foto}</p>}
+                                        {errors.foto && <p className="form-error">{errors.foto}</p>}
                                     </div>
 
-                                    {/* Datos personales */}
+                                    {/* Name / Email */}
                                     <div className="form-row">
                                         <div className="form-group">
-                                            <label className="label">Nombre completo *</label>
+                                            <label className="form-label">Nombre completo *</label>
                                             <input
                                                 type="text"
                                                 value={data.name}
                                                 onChange={(e) => setData('name', e.target.value)}
-                                                className="input"
+                                                className="form-input"
                                                 placeholder="Ej: Carlos Martínez"
                                                 required
                                             />
-                                            {errors.name && <p className="error">{errors.name}</p>}
+                                            {errors.name && <p className="form-error">{errors.name}</p>}
                                         </div>
-
                                         <div className="form-group">
-                                            <label className="label">Correo electrónico *</label>
+                                            <label className="form-label">Correo electrónico *</label>
                                             <input
                                                 type="email"
                                                 value={data.email}
                                                 onChange={(e) => setData('email', e.target.value)}
-                                                className="input"
+                                                className="form-input"
                                                 placeholder="instructor@personalbox.com"
                                                 required
                                             />
-                                            {errors.email && <p className="error">{errors.email}</p>}
+                                            {errors.email && <p className="form-error">{errors.email}</p>}
                                         </div>
                                     </div>
 
-                                    {/* Contraseña */}
+                                    {/* Password */}
                                     <div className="form-group">
-                                        <label className="label">
+                                        <label className="form-label">
                                             Contraseña {!editingInstructor && '*'}
                                             {editingInstructor && <span className="label-hint">(dejar en blanco para mantener la actual)</span>}
                                         </label>
@@ -396,42 +370,44 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                             type="password"
                                             value={data.password}
                                             onChange={(e) => setData('password', e.target.value)}
-                                            className="input"
+                                            className="form-input"
                                             placeholder="Mínimo 8 caracteres"
                                             required={!editingInstructor}
                                         />
-                                        {errors.password && <p className="error">{errors.password}</p>}
+                                        {errors.password && <p className="form-error">{errors.password}</p>}
                                     </div>
 
                                     {/* Especialidad principal */}
                                     <div className="form-group">
-                                        <label className="label">Especialidad principal</label>
+                                        <label className="form-label">Especialidad principal</label>
                                         <input
                                             type="text"
                                             value={data.especialidad}
                                             onChange={(e) => setData('especialidad', e.target.value)}
-                                            className="input"
+                                            className="form-input"
                                             placeholder="Ej: Crossfit y Musculación"
                                         />
-                                        {errors.especialidad && <p className="error">{errors.especialidad}</p>}
+                                        {errors.especialidad && <p className="form-error">{errors.especialidad}</p>}
                                     </div>
 
-                                    {/* Tipos de clase que puede impartir */}
+                                    {/* Tipos de clase */}
                                     <div className="form-group">
-                                        <label className="label">Tipos de clase que puede impartir</label>
-                                        <div className="tipos-clase-grid">
+                                        <label className="form-label">Tipos de clase que puede impartir</label>
+                                        <div className="tipos-grid">
                                             {tiposClase.map((tipo) => (
-                                                <label key={tipo.id} className="tipo-clase-checkbox">
+                                                <label key={tipo.id} className="tipo-option">
                                                     <input
                                                         type="checkbox"
                                                         checked={data.especialidades_ids.includes(tipo.id)}
                                                         onChange={() => toggleEspecialidad(tipo.id)}
+                                                        className="hidden-input"
                                                     />
                                                     <span
-                                                        className="tipo-clase-badge"
+                                                        className="tipo-badge"
                                                         style={{
-                                                            backgroundColor: data.especialidades_ids.includes(tipo.id) ? tipo.color : 'rgba(255, 20, 147, 0.1)',
-                                                            borderColor: tipo.color
+                                                            backgroundColor: data.especialidades_ids.includes(tipo.id) ? tipo.color : 'rgba(255,20,147,0.07)',
+                                                            borderColor: tipo.color,
+                                                            opacity: data.especialidades_ids.includes(tipo.id) ? 1 : 0.6,
                                                         }}
                                                     >
                                                         {tipo.nombre}
@@ -439,134 +415,129 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                                                 </label>
                                             ))}
                                         </div>
-                                        {errors.especialidades_ids && <p className="error">{errors.especialidades_ids}</p>}
+                                        {errors.especialidades_ids && <p className="form-error">{errors.especialidades_ids}</p>}
                                     </div>
 
                                     {/* Tarifas */}
                                     <div className="form-row">
                                         <div className="form-group">
-                                            <label className="label">Tarifa por clase</label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">$</span>
+                                            <label className="form-label">Tarifa por clase</label>
+                                            <div className="input-prefix-wrap">
+                                                <span className="input-prefix-symbol">$</span>
                                                 <input
                                                     type="number"
                                                     value={data.tarifa_por_clase}
                                                     onChange={(e) => setData('tarifa_por_clase', e.target.value)}
-                                                    className="input input-with-prefix-field"
+                                                    className="form-input form-input-prefixed"
                                                     placeholder="50000"
                                                     min="0"
                                                     step="1000"
                                                 />
                                             </div>
-                                            {errors.tarifa_por_clase && <p className="error">{errors.tarifa_por_clase}</p>}
+                                            {errors.tarifa_por_clase && <p className="form-error">{errors.tarifa_por_clase}</p>}
                                         </div>
-
                                         <div className="form-group">
-                                            <label className="label">Tarifa por asistente</label>
-                                            <div className="input-with-prefix">
-                                                <span className="input-prefix">$</span>
+                                            <label className="form-label">Tarifa por asistente</label>
+                                            <div className="input-prefix-wrap">
+                                                <span className="input-prefix-symbol">$</span>
                                                 <input
                                                     type="number"
                                                     value={data.tarifa_por_asistente}
                                                     onChange={(e) => setData('tarifa_por_asistente', e.target.value)}
-                                                    className="input input-with-prefix-field"
+                                                    className="form-input form-input-prefixed"
                                                     placeholder="5000"
                                                     min="0"
                                                     step="1000"
                                                 />
                                             </div>
-                                            {errors.tarifa_por_asistente && <p className="error">{errors.tarifa_por_asistente}</p>}
+                                            {errors.tarifa_por_asistente && <p className="form-error">{errors.tarifa_por_asistente}</p>}
                                         </div>
                                     </div>
 
                                     {/* Biografía */}
                                     <div className="form-group">
-                                        <label className="label">Biografía</label>
+                                        <label className="form-label">Biografía</label>
                                         <textarea
                                             value={data.biografia}
                                             onChange={(e) => setData('biografia', e.target.value)}
-                                            className="textarea"
-                                            rows="4"
+                                            className="form-textarea"
+                                            rows="3"
                                             placeholder="Describe la experiencia y certificaciones del instructor..."
                                         />
-                                        {errors.biografia && <p className="error">{errors.biografia}</p>}
+                                        {errors.biografia && <p className="form-error">{errors.biografia}</p>}
                                     </div>
 
-                                    {/* Estado activo */}
+                                    {/* Activo */}
                                     <div className="form-group">
-                                        <label className="checkbox-label">
+                                        <label className="toggle-label">
                                             <input
                                                 type="checkbox"
                                                 checked={data.activo}
                                                 onChange={(e) => setData('activo', e.target.checked)}
-                                                className="checkbox"
+                                                className="toggle-checkbox"
                                             />
                                             <span>Activo (puede impartir clases)</span>
                                         </label>
                                     </div>
 
-                                </div>{/* fin modal-body */}
+                                </div>
 
-                                {/* Footer sticky SIEMPRE visible en la parte inferior */}
                                 <div className="modal-footer">
-                                    <button
-                                        type="button"
-                                        onClick={closeModal}
-                                        className="btn-cancel"
-                                    >
+                                    <button type="button" onClick={closeModal} className="btn-cancel">
                                         Cancelar
                                     </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className="btn-submit"
-                                    >
+                                    <button type="submit" disabled={isSubmitting} className="btn-primary">
                                         {isSubmitting ? 'Guardando...' : 'Guardar Instructor'}
                                     </button>
                                 </div>
 
-                            </form>{/* fin modal-form-wrapper */}
-
+                            </form>
                         </div>
                     </div>
                 )}
             </div>
 
             <style jsx>{`
-                .instructores-container {
+                * { box-sizing: border-box; }
+
+                .page-container {
                     max-width: 1400px;
                     margin: 0 auto;
+                    padding: 0.5rem 0;
                 }
 
-                .header {
+                /* ── Header ── */
+                .page-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 2rem;
-                    flex-wrap: wrap;
+                    align-items: flex-start;
+                    margin-bottom: 1.75rem;
                     gap: 1rem;
+                    flex-wrap: wrap;
                 }
 
-                .title {
-                    font-size: 2rem;
+                .page-title {
+                    font-size: clamp(1.6rem, 4vw, 2.2rem);
                     font-weight: 900;
                     color: #FF1493;
                     margin: 0;
-                    text-shadow: 0 0 10px rgba(255, 20, 147, 0.5);
+                    letter-spacing: 2px;
+                    text-shadow: 0 0 20px rgba(255,20,147,0.5), 0 0 40px rgba(255,20,147,0.2);
                 }
 
-                .subtitle {
-                    color: #999;
-                    margin: 0.5rem 0 0 0;
+                .page-subtitle {
+                    color: rgba(255,255,255,0.4);
+                    margin: 0.4rem 0 0;
                     font-size: 0.875rem;
                 }
 
-                .btn-create {
+                /* ── Buttons ── */
+                .btn-primary {
                     background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
                     color: #000;
                     border: none;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 12px;
                     font-weight: 900;
                     font-size: 0.875rem;
                     cursor: pointer;
@@ -574,282 +545,274 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
+                    box-shadow: 0 4px 20px rgba(255,20,147,0.4), 0 0 0 1px rgba(255,20,147,0.3);
+                    white-space: nowrap;
                 }
-
-                .btn-create:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
+                .btn-primary:hover:not(:disabled) {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 30px rgba(255,20,147,0.55);
                 }
+                .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-                .icon {
-                    font-size: 1.25rem;
-                }
-
+                /* ── Search ── */
                 .search-form {
                     display: flex;
-                    gap: 1rem;
-                    margin-bottom: 2rem;
+                    gap: 0.75rem;
+                    margin-bottom: 1.5rem;
+                    flex-wrap: wrap;
+                }
+
+                .search-wrapper {
+                    flex: 1;
+                    min-width: 200px;
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                }
+
+                .search-icon {
+                    position: absolute;
+                    left: 1rem;
+                    pointer-events: none;
                 }
 
                 .search-input {
-                    flex: 1;
-                    padding: 0.875rem;
-                    background: rgba(10, 10, 10, 0.95);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 8px;
+                    width: 100%;
+                    padding: 0.875rem 1rem 0.875rem 2.75rem;
+                    background: rgba(255,20,147,0.04);
+                    backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255,20,147,0.2);
+                    border-radius: 12px;
                     color: #fff;
                     font-size: 0.875rem;
                     transition: all 0.3s;
-                }
-
-                .search-input:focus {
                     outline: none;
-                    border-color: #FF1493;
-                    box-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
+                }
+                .search-input::placeholder { color: rgba(255,255,255,0.3); }
+                .search-input:focus {
+                    border-color: rgba(255,20,147,0.6);
+                    background: rgba(255,20,147,0.07);
+                    box-shadow: 0 0 0 3px rgba(255,20,147,0.1);
                 }
 
                 .btn-search {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 2px solid #FF1493;
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.4);
                     color: #FF1493;
                     padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
+                    border-radius: 12px;
                     font-weight: 700;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.25s;
+                    white-space: nowrap;
                 }
-
                 .btn-search:hover {
-                    background: #FF1493;
-                    color: #000;
+                    background: rgba(255,20,147,0.18);
+                    border-color: #FF1493;
                 }
 
-                .table-container {
-                    background: rgba(10, 10, 10, 0.95);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 12px;
+                /* ── Glass Card ── */
+                .glass-card {
+                    background: rgba(255,20,147,0.03);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255,20,147,0.2);
+                    border-radius: 16px;
                     overflow: hidden;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.1);
+                    box-shadow:
+                        0 8px 32px rgba(0,0,0,0.4),
+                        inset 0 1px 0 rgba(255,20,147,0.1);
                 }
 
+                .table-scroll { overflow-x: auto; }
+
+                /* ── Table ── */
                 .table {
                     width: 100%;
                     border-collapse: collapse;
+                    min-width: 750px;
                 }
 
-                .table thead {
-                    background: rgba(255, 20, 147, 0.1);
-                }
+                .table thead { background: rgba(255,20,147,0.07); }
 
                 .table th {
-                    padding: 1rem;
+                    padding: 1rem 1.25rem;
                     text-align: left;
                     color: #FF1493;
-                    font-weight: 900;
-                    font-size: 0.75rem;
+                    font-weight: 800;
+                    font-size: 0.68rem;
                     text-transform: uppercase;
-                    letter-spacing: 1px;
-                    border-bottom: 2px solid rgba(255, 20, 147, 0.3);
+                    letter-spacing: 1.5px;
+                    border-bottom: 1px solid rgba(255,20,147,0.2);
+                    white-space: nowrap;
                 }
 
                 .table td {
-                    padding: 1rem;
-                    border-bottom: 1px solid rgba(255, 20, 147, 0.1);
-                    color: #ccc;
+                    padding: 1rem 1.25rem;
+                    border-bottom: 1px solid rgba(255,20,147,0.07);
+                    color: rgba(255,255,255,0.75);
+                    font-size: 0.875rem;
+                    vertical-align: middle;
                 }
 
-                .table tbody tr:hover {
-                    background: rgba(255, 20, 147, 0.05);
-                }
+                .table tbody tr { transition: background 0.2s; }
+                .table tbody tr:hover { background: rgba(255,20,147,0.04); }
+                .table tbody tr:last-child td { border-bottom: none; }
 
-                .instructor-info {
+                .text-center { text-align: center !important; }
+                .text-muted { color: rgba(255,255,255,0.3); font-style: italic; font-size: 0.8rem; }
+
+                /* ── Instructor cell ── */
+                .instructor-cell {
                     display: flex;
                     align-items: center;
-                    gap: 1rem;
+                    gap: 0.875rem;
                 }
 
                 .instructor-avatar {
-                    width: 60px;
-                    height: 60px;
+                    width: 52px;
+                    height: 52px;
                     border-radius: 50%;
                     overflow: hidden;
-                    border: 2px solid #FF1493;
-                    box-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
-                }
-
-                .instructor-avatar img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
-
-                .avatar-placeholder {
-                    width: 100%;
-                    height: 100%;
+                    border: 2px solid rgba(255,20,147,0.4);
+                    box-shadow: 0 0 12px rgba(255,20,147,0.2);
+                    flex-shrink: 0;
+                    background: linear-gradient(135deg, #FF1493, #C71585);
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    background: linear-gradient(135deg, #FF1493, #C71585);
-                    color: #000;
-                    font-size: 1.5rem;
-                    font-weight: 900;
                 }
+                .instructor-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-                .instructor-details {
-                    flex: 1;
+                .avatar-initial {
+                    color: #000;
+                    font-size: 1.4rem;
+                    font-weight: 900;
                 }
 
                 .instructor-name {
                     color: #fff;
                     font-weight: 700;
-                    margin: 0 0 0.25rem 0;
-                    font-size: 1rem;
+                    margin: 0 0 0.2rem;
+                    font-size: 0.9rem;
                 }
-
                 .instructor-email {
-                    color: #999;
-                    margin: 0 0 0.25rem 0;
-                    font-size: 0.875rem;
+                    color: rgba(255,255,255,0.4);
+                    margin: 0 0 0.2rem;
+                    font-size: 0.78rem;
                 }
-
-                .instructor-specialty {
+                .instructor-spec {
                     color: #FF1493;
                     margin: 0;
-                    font-size: 0.75rem;
+                    font-size: 0.72rem;
                     font-style: italic;
                 }
 
-                .especialidades-badges {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-                }
+                /* ── Badges ── */
+                .badges-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
-                .especialidad-badge {
+                .esp-badge {
                     display: inline-block;
-                    padding: 0.375rem 0.75rem;
+                    padding: 0.3rem 0.65rem;
                     border-radius: 6px;
                     color: #fff;
                     font-weight: 700;
-                    font-size: 0.75rem;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-                    box-shadow: 0 0 10px currentColor;
+                    font-size: 0.7rem;
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                 }
 
-                .no-especialidades {
-                    color: #666;
-                    font-size: 0.875rem;
-                    font-style: italic;
-                }
-
-                /* CAMBIO: nuevo estilo para el valor de tarifa en su propia celda */
                 .tarifa-value {
                     color: #FF1493;
                     font-weight: 700;
-                    font-size: 0.95rem;
+                    font-size: 0.875rem;
+                }
+                .tarifa-empty {
+                    color: rgba(255,255,255,0.25);
+                    font-style: italic;
+                    font-size: 0.78rem;
                 }
 
-                .badge {
-                    padding: 0.5rem 1rem;
-                    border-radius: 6px;
+                .status-badge {
+                    padding: 0.4rem 0.875rem;
+                    border-radius: 8px;
                     font-weight: 700;
-                    font-size: 0.75rem;
+                    font-size: 0.72rem;
                     border: none;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.25s;
+                    white-space: nowrap;
                 }
-
-                .badge-active {
-                    background: rgba(34, 197, 94, 0.2);
+                .status-active {
+                    background: rgba(34,197,94,0.15);
                     color: #22c55e;
-                    border: 1px solid #22c55e;
+                    border: 1px solid rgba(34,197,94,0.35);
                 }
-
-                .badge-inactive {
-                    background: rgba(239, 68, 68, 0.2);
+                .status-inactive {
+                    background: rgba(239,68,68,0.15);
                     color: #ef4444;
-                    border: 1px solid #ef4444;
+                    border: 1px solid rgba(239,68,68,0.35);
                 }
 
-                .actions {
-                    display: flex;
-                    gap: 0.5rem;
-                }
+                .actions { display: flex; gap: 0.5rem; }
 
-                .btn-action {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 1px solid rgba(255, 20, 147, 0.3);
-                    padding: 0.5rem 0.75rem;
-                    border-radius: 6px;
-                    font-size: 1.125rem;
+                .btn-icon {
+                    background: rgba(255,255,255,0.04);
+                    border: 1px solid rgba(255,20,147,0.2);
+                    padding: 0.4rem 0.6rem;
+                    border-radius: 8px;
+                    font-size: 1rem;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.2s;
                 }
-
-                .btn-action:hover {
-                    border-color: #FF1493;
-                    box-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
-                }
-
-                .btn-edit:hover {
-                    background: rgba(59, 130, 246, 0.2);
+                .btn-icon-edit:hover {
+                    background: rgba(59,130,246,0.15);
                     border-color: #3b82f6;
                 }
-
-                .btn-delete:hover {
-                    background: rgba(239, 68, 68, 0.2);
+                .btn-icon-delete:hover {
+                    background: rgba(239,68,68,0.15);
                     border-color: #ef4444;
                 }
 
                 .empty-state {
                     text-align: center;
-                    padding: 3rem !important;
-                    color: #666;
+                    padding: 3.5rem 1rem !important;
+                    color: rgba(255,255,255,0.25) !important;
                 }
+                .empty-state span { font-size: 2.5rem; display: block; margin-bottom: 0.75rem; }
+                .empty-state p { margin: 0; }
 
+                /* ── Pagination ── */
                 .pagination {
                     display: flex;
                     justify-content: center;
-                    gap: 0.5rem;
-                    margin-top: 2rem;
+                    flex-wrap: wrap;
+                    gap: 0.4rem;
+                    margin-top: 1.5rem;
                 }
 
-                .page-link {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 1px solid rgba(255, 20, 147, 0.3);
+                .page-btn {
+                    background: rgba(255,20,147,0.07);
+                    border: 1px solid rgba(255,20,147,0.2);
                     color: #FF1493;
-                    padding: 0.5rem 1rem;
-                    border-radius: 6px;
+                    padding: 0.5rem 0.875rem;
+                    border-radius: 8px;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.2s;
                     font-weight: 600;
+                    font-size: 0.8rem;
                 }
+                .page-btn:hover:not(:disabled) { background: rgba(255,20,147,0.18); border-color: #FF1493; }
+                .page-btn.active { background: #FF1493; color: #000; border-color: #FF1493; }
+                .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-                .page-link:hover:not(:disabled) {
-                    background: #FF1493;
-                    color: #000;
-                }
-
-                .page-link.active {
-                    background: #FF1493;
-                    color: #000;
-                }
-
-                .page-link:disabled {
-                    opacity: 0.3;
-                    cursor: not-allowed;
-                }
-
-                /* ══════════════════════════════
-                   MODAL — estructura flex column
-                   para que el footer sea siempre
-                   visible sin scroll
-                ══════════════════════════════ */
+                /* ── Modal ── */
                 .modal-overlay {
                     position: fixed;
                     inset: 0;
-                    background: rgba(0, 0, 0, 0.8);
+                    background: rgba(0,0,0,0.75);
+                    backdrop-filter: blur(6px);
+                    -webkit-backdrop-filter: blur(6px);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -857,18 +820,29 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     padding: 1rem;
                 }
 
-                .modal {
-                    background: rgba(10, 10, 10, 0.98);
-                    border: 2px solid #FF1493;
-                    border-radius: 12px;
+                .modal-glass {
+                    background: rgba(10, 3, 15, 0.88);
+                    backdrop-filter: blur(30px);
+                    -webkit-backdrop-filter: blur(30px);
+                    border: 1px solid rgba(255,20,147,0.35);
+                    border-radius: 20px;
                     width: 100%;
-                    max-width: 700px;
+                    max-width: 680px;
                     height: 90vh;
                     max-height: 90vh;
                     display: flex;
                     flex-direction: column;
-                    box-shadow: 0 0 40px rgba(255, 20, 147, 0.5);
+                    box-shadow:
+                        0 30px 80px rgba(0,0,0,0.7),
+                        0 0 60px rgba(255,20,147,0.15),
+                        inset 0 1px 0 rgba(255,20,147,0.2);
                     overflow: hidden;
+                    animation: modalIn 0.25s cubic-bezier(.34,1.56,.64,1);
+                }
+
+                @keyframes modalIn {
+                    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
                 }
 
                 .modal-header {
@@ -876,29 +850,33 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 1.5rem;
-                    border-bottom: 1px solid rgba(255, 20, 147, 0.3);
-                    background: rgba(10, 10, 10, 0.98);
+                    padding: 1.5rem 1.75rem;
+                    border-bottom: 1px solid rgba(255,20,147,0.15);
+                    background: rgba(255,20,147,0.04);
                 }
 
                 .modal-title {
                     color: #FF1493;
-                    font-size: 1.5rem;
+                    font-size: 1.2rem;
                     font-weight: 900;
                     margin: 0;
                 }
 
                 .btn-close {
-                    background: none;
-                    border: none;
-                    color: #999;
-                    font-size: 1.5rem;
+                    background: rgba(255,255,255,0.06);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: rgba(255,255,255,0.5);
+                    font-size: 1rem;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.2s;
+                    width: 32px; height: 32px;
+                    border-radius: 8px;
+                    display: flex; align-items: center; justify-content: center;
                 }
-
                 .btn-close:hover {
                     color: #FF1493;
+                    border-color: rgba(255,20,147,0.4);
+                    background: rgba(255,20,147,0.1);
                     transform: rotate(90deg);
                 }
 
@@ -913,7 +891,7 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                 .modal-body {
                     flex: 1;
                     overflow-y: auto;
-                    padding: 1.5rem;
+                    padding: 1.5rem 1.75rem;
                     min-height: 0;
                 }
 
@@ -921,53 +899,15 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     flex-shrink: 0;
                     display: flex;
                     justify-content: flex-end;
-                    gap: 1rem;
-                    padding: 1.25rem 1.5rem;
-                    border-top: 2px solid rgba(255, 20, 147, 0.3);
-                    background: rgba(10, 10, 10, 0.98);
+                    gap: 0.75rem;
+                    padding: 1.25rem 1.75rem;
+                    border-top: 1px solid rgba(255,20,147,0.15);
+                    background: rgba(255,20,147,0.03);
+                    flex-wrap: wrap;
                 }
 
-                .btn-cancel {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    color: #FF1493;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                }
-
-                .btn-cancel:hover {
-                    border-color: #FF1493;
-                    background: rgba(255, 20, 147, 0.2);
-                }
-
-                .btn-submit {
-                    background: linear-gradient(135deg, #FF1493 0%, #C71585 100%);
-                    color: #000;
-                    border: none;
-                    padding: 0.875rem 1.5rem;
-                    border-radius: 8px;
-                    font-weight: 900;
-                    cursor: pointer;
-                    transition: all 0.3s;
-                    box-shadow: 0 0 20px rgba(255, 20, 147, 0.4);
-                }
-
-                .btn-submit:hover:not(:disabled) {
-                    transform: translateY(-3px);
-                    box-shadow: 0 0 30px rgba(255, 20, 147, 0.6);
-                }
-
-                .btn-submit:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                .form-group {
-                    margin-bottom: 1.5rem;
-                }
+                /* ── Form ── */
+                .form-group { margin-bottom: 1.25rem; }
 
                 .form-row {
                     display: grid;
@@ -975,10 +915,10 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                     gap: 1rem;
                 }
 
-                .label {
+                .form-label {
                     display: block;
-                    color: #FF1493;
-                    font-size: 0.75rem;
+                    color: rgba(255,20,147,0.9);
+                    font-size: 0.7rem;
                     font-weight: 700;
                     margin-bottom: 0.5rem;
                     text-transform: uppercase;
@@ -986,195 +926,164 @@ export default function InstructoresIndex({ auth, instructores, tiposClase, filt
                 }
 
                 .label-hint {
-                    color: #999;
+                    color: rgba(255,255,255,0.3);
                     font-size: 0.7rem;
                     font-weight: 400;
                     text-transform: none;
                     margin-left: 0.5rem;
                 }
 
-                .input, .textarea {
+                .form-input, .form-textarea {
                     width: 100%;
-                    padding: 0.875rem;
-                    background: #000;
-                    border: 2px solid rgba(255, 20, 147, 0.3);
-                    border-radius: 8px;
+                    padding: 0.875rem 1rem;
+                    background: rgba(255,20,147,0.05);
+                    border: 1px solid rgba(255,20,147,0.2);
+                    border-radius: 10px;
                     color: #fff;
                     font-size: 0.875rem;
-                    transition: all 0.3s;
-                    box-sizing: border-box;
-                }
-
-                .input:focus, .textarea:focus {
+                    transition: all 0.25s;
                     outline: none;
-                    border-color: #FF1493;
-                    box-shadow: 0 0 10px rgba(255, 20, 147, 0.3);
+                }
+                .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.25); }
+                .form-input:focus, .form-textarea:focus {
+                    border-color: rgba(255,20,147,0.6);
+                    background: rgba(255,20,147,0.08);
+                    box-shadow: 0 0 0 3px rgba(255,20,147,0.1);
+                }
+                .form-textarea { resize: vertical; font-family: inherit; }
+
+                .form-error {
+                    color: #ef4444;
+                    font-size: 0.75rem;
+                    margin: 0.4rem 0 0;
                 }
 
-                .foto-upload {
+                /* Foto */
+                .foto-row {
                     display: flex;
                     align-items: center;
                     gap: 1rem;
+                    flex-wrap: wrap;
                 }
 
                 .foto-preview {
-                    width: 100px;
-                    height: 100px;
+                    width: 88px;
+                    height: 88px;
                     border-radius: 50%;
                     overflow: hidden;
-                    border: 2px solid rgba(255, 20, 147, 0.3);
+                    border: 2px solid rgba(255,20,147,0.3);
                     flex-shrink: 0;
+                    background: rgba(255,20,147,0.07);
                 }
-
-                .foto-preview img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                }
+                .foto-preview img { width: 100%; height: 100%; object-fit: cover; }
 
                 .foto-placeholder {
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    background: rgba(255, 20, 147, 0.1);
-                    color: #666;
+                    width: 100%; height: 100%;
+                    display: flex; flex-direction: column;
+                    align-items: center; justify-content: center;
+                    color: rgba(255,255,255,0.3);
                 }
+                .foto-placeholder span { font-size: 1.75rem; }
+                .foto-placeholder p { margin: 0.25rem 0 0; font-size: 0.7rem; }
 
-                .foto-placeholder span {
-                    font-size: 2rem;
-                    margin-bottom: 0.25rem;
-                }
+                .hidden-input { display: none; }
 
-                .foto-placeholder p {
-                    margin: 0;
-                    font-size: 0.75rem;
-                }
-
-                .foto-input {
-                    display: none;
-                }
-
-                .foto-button {
-                    background: rgba(255, 20, 147, 0.1);
-                    border: 2px solid #FF1493;
+                .btn-upload {
+                    background: rgba(255,20,147,0.08);
+                    border: 1px solid rgba(255,20,147,0.35);
                     color: #FF1493;
-                    padding: 0.75rem 1.5rem;
-                    border-radius: 8px;
+                    padding: 0.7rem 1.25rem;
+                    border-radius: 10px;
                     font-weight: 700;
-                    font-size: 0.875rem;
+                    font-size: 0.8rem;
                     cursor: pointer;
-                    transition: all 0.3s;
+                    transition: all 0.2s;
                 }
+                .btn-upload:hover { background: rgba(255,20,147,0.16); }
 
-                .foto-button:hover {
-                    background: #FF1493;
-                    color: #000;
-                }
-
-                .tipos-clase-grid {
+                /* Tipos grid */
+                .tipos-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                    gap: 0.75rem;
+                    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                    gap: 0.6rem;
                 }
 
-                .tipo-clase-checkbox {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                    cursor: pointer;
-                }
+                .tipo-option { cursor: pointer; }
 
-                .tipo-clase-checkbox input {
-                    display: none;
-                }
-
-                .tipo-clase-badge {
-                    flex: 1;
-                    padding: 0.625rem 0.875rem;
-                    border-radius: 6px;
+                .tipo-badge {
+                    display: block;
+                    padding: 0.55rem 0.75rem;
+                    border-radius: 8px;
                     color: #fff;
                     font-weight: 700;
-                    font-size: 0.75rem;
+                    font-size: 0.72rem;
                     text-align: center;
-                    border: 2px solid;
-                    transition: all 0.3s;
+                    border: 1px solid;
+                    transition: all 0.2s;
+                    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
                 }
+                .tipo-option:hover .tipo-badge { transform: scale(1.04); }
 
-                .tipo-clase-checkbox:hover .tipo-clase-badge {
-                    transform: scale(1.05);
-                }
-
-                .input-with-prefix {
+                /* Prefix input */
+                .input-prefix-wrap {
                     position: relative;
                     display: flex;
                     align-items: center;
                 }
-
-                .input-prefix {
+                .input-prefix-symbol {
                     position: absolute;
                     left: 1rem;
                     color: #FF1493;
                     font-weight: 700;
-                    font-size: 1rem;
                     pointer-events: none;
                 }
+                .form-input-prefixed { padding-left: 2.25rem; }
 
-                .input-with-prefix-field {
-                    padding-left: 2.5rem;
-                }
-
-                .checkbox-label {
+                /* Toggle */
+                .toggle-label {
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
-                    color: #ccc;
+                    gap: 0.75rem;
+                    color: rgba(255,255,255,0.65);
+                    cursor: pointer;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                }
+                .toggle-checkbox {
+                    width: 18px; height: 18px;
+                    accent-color: #FF1493;
                     cursor: pointer;
                 }
 
-                .checkbox {
-                    width: 20px;
-                    height: 20px;
+                .btn-cancel {
+                    background: rgba(255,20,147,0.06);
+                    border: 1px solid rgba(255,20,147,0.25);
+                    color: #FF1493;
+                    padding: 0.75rem 1.25rem;
+                    border-radius: 10px;
+                    font-weight: 700;
                     cursor: pointer;
+                    transition: all 0.2s;
+                    font-size: 0.875rem;
                 }
+                .btn-cancel:hover { background: rgba(255,20,147,0.12); }
 
-                .error {
-                    color: #ef4444;
-                    font-size: 0.75rem;
-                    margin-top: 0.5rem;
-                }
-
+                /* ── Responsive ── */
                 @media (max-width: 768px) {
-                    .title {
-                        font-size: 1.5rem;
-                    }
+                    .page-header { flex-direction: column; align-items: flex-start; }
+                    .btn-primary { width: 100%; justify-content: center; }
+                    .search-form { flex-direction: column; }
+                    .btn-search { width: 100%; }
+                    .form-row { grid-template-columns: 1fr; }
+                    .tipos-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+                    .modal-footer { flex-direction: column; }
+                    .btn-cancel, .btn-primary { width: 100%; justify-content: center; }
+                }
 
-                    .form-row {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .tipos-clase-grid {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .table-container {
-                        overflow-x: auto;
-                    }
-
-                    .table {
-                        min-width: 900px;
-                    }
-
-                    .modal-footer {
-                        flex-direction: column;
-                    }
-
-                    .btn-cancel, .btn-submit {
-                        width: 100%;
-                        text-align: center;
-                    }
+                @media (max-width: 480px) {
+                    .modal-glass { border-radius: 16px; }
+                    .instructor-avatar { width: 42px; height: 42px; }
+                    .avatar-initial { font-size: 1.1rem; }
                 }
             `}</style>
         </DashboardLayout>
